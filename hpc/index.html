@@ -1022,8 +1022,57 @@ cat(response)</pre>
             <div class="tab-content" id="tab-kubernetes">
                 <div class="section">
                     <h2>☸️ خوشه محاسباتی (Kubernetes Cluster)</h2>
-                    <p>خوشه محاسباتی توزیع‌شده مبتنی بر <strong>K3s</strong> (نسخه سبک Kubernetes) شامل دو سرور — یک ماستر و یک ورکر — برای اجرای همزمان چندین سرویس محاسباتی.</p>
+                    <p>خوشه محاسباتی توزیع‌شده مبتنی بر <strong>K3s</strong> (نسخه سبک Kubernetes)  
+					شامل دو سیستم — یک Master و یک Worker — برای اجرای همزمان چندین سرویس محاسباتی
+					در حال راه اندازی و تست است.
+					</p>
 
+
+                    <div class="subsection">
+                        <h3>🔗 روش‌های دسترسی</h3>
+                        <div class="method-grid">
+                            <div class="method-box">
+                                <h4>🏫 از داخل دانشکده</h4>
+                                <p>در مرورگر سیستم اداری خود (متصل به شبکه دانشکده) آدرس زیر را وارد کنید:</p>
+                                <div class="url"><a href="http://172.21.129.18:32081/">http://172.21.129.18:32081/</a></div>
+                                								<p>
+								سیستم در حال راه اندازی است. فعلا از بخش Sign up در درگاه ورود ژوپیترهاب، اقدام به ثبت نام نموده 
+								و منتظر تایید باشید.
+								</p>
+                            </div>
+                            <div class="method-box">
+                                <h4>🌍 از خارج از دانشکده (Tailscale)</h4>
+                                <ol>
+                                    <li>
+                                        <a href="https://fumdrive.um.ac.ir/index.php/s/BEomtEPGGt6teGz">دانلود</a>
+                                        و نصب Tailscale
+                                    </li>
+                                    <li>ثبت‌نام با یک ایمیل</li>
+                                    <li>قبول دعوتنامه از <a
+                                            href="https://login.tailscale.com/admin/invite/hWniarZXBiY8UnboexPy11">این
+                                            لینک</a></li>
+                                    <li>وارد کردن آدرس زیر در مرورگر:</li>
+                                </ol>
+                                <div style="margin: 15px 0;">
+                                    <strong>🔹 استفاده از نام دستگاه (توصیه شده):</strong>
+                                    <div class="url">
+                                        <a href="http://master-h610m-hd3p.tail446b95.ts.net:32081/">http://master-h610m-hd3p.tail446b95.ts.net:32081/</a>
+                                    </div>
+                                </div>
+                                <div style="margin: 15px 0;">
+                                    <strong>🔹 استفاده از IP (جایگزین):</strong>
+                                    <div class="url">
+                                        <a href="http://100.126.42.17:32081/">http://100.126.42.17:32081</a>
+                                    </div>
+                                </div>
+                                <p>وارد شدن با <strong>حساب کاربری ثبت نام و تایید شده</strong></p>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+<!--  
                     <div class="subsection">
                         <h3>🔗 روش‌های دسترسی</h3>
                         <div class="method-grid">
@@ -1034,10 +1083,10 @@ cat(response)</pre>
                                     <strong>📓 JupyterHub (خوشه):</strong>
                                     <div class="url"><a href="http://172.21.129.18:32081/">http://172.21.129.18:32081/</a></div>
                                 </div>
-                                <div style="margin: 10px 0;">
+                               <div style="margin: 10px 0;">
                                     <strong>📊 داشبورد مدیریت کاربران:</strong>
                                     <div class="url"><a href="http://172.21.129.18:8000/">http://172.21.129.18:8000/</a></div>
-                                </div>
+                                </div> 
                                 <p style="margin-top: 10px;">ورود به JupyterHub با <strong>نام کاربری و رمز عبور اختصاصی</strong> (توسط مدیر سیستم ایجاد شده).</p>
                             </div>
                             <div class="method-box">
@@ -1067,7 +1116,7 @@ cat(response)</pre>
                                 <div class="tailscale-note" style="margin-top: 10px;">
                                     🔍 <strong>نکته:</strong> پس از اتصال به Tailscale، IP ماستر (172.21.129.18) را در پنل مدیریت Tailscale جستجو کنید تا آدرس دقیق را پیدا کنید.
                                 </div>
-                            </div>
+                            </div>-->
                         </div>
                     </div>
 
