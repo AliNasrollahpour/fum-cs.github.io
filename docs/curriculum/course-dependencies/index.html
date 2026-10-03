@@ -63,7 +63,7 @@ async function load(){
    if(seen[key])return;
    seen[key]=1;
    var h=a.querySelector("h2");
-   var title=h?(h.getAttribute("title")||h.textContent).replace(/^\\S+\\s*/,"").trim():href.split("/").pop();
+   var title=h?(h.getAttribute("title")||h.textContent).trim():href.split("/").pop();
    courses.push({id:id(href),url:href,title:title,category:page.group.category,prereqs:[],coreqs:[],conditions:[]});
   });
  });
@@ -197,3 +197,5 @@ svg.onpointerdown=function(e){if(e.target.closest(".node"))return;drag=true;last
 window.onpointermove=function(e){if(!drag)return;tx+=e.clientX-last.x;ty+=e.clientY-last.y;last={x:e.clientX,y:e.clientY};transform()};
 window.onpointerup=function(){drag=false;svg.classList.remove("dragging")};
 load().catch(function(e){document.getElementById("details").textContent="خطا در بارگذاری: "+e.message});
+
+</script></body></html>
