@@ -134,9 +134,8 @@ function buildLayout(){
  courses.forEach(function(c){maxDepth=Math.max(maxDepth,depth[c.id]||0)});
  var radius=Math.max(220,Math.sqrt(n)*42);
  courses.forEach(function(c,i){
-  var d=depth[c.id]||0;
   var a=i/n*Math.PI*2;
-  pos[c.id]={x:80+(maxDepth-d)*150+Math.cos(a)*radius*.18,y:300+Math.sin(a)*radius};
+  pos[c.id]={x:80+Math.cos(a)*radius*.18,y:300+Math.sin(a)*radius};
   vel[c.id]={x:0,y:0};
  });
  for(var iter=0;iter<260;iter++){
@@ -145,9 +144,9 @@ function buildLayout(){
   for(var i=0;i<n;i++)for(var j=i+1;j<n;j++){
    var a=pos[courses[i].id],b=pos[courses[j].id];
    var dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy,d=Math.sqrt(d2);
-   if(d>260)continue;
-   d2+=400;d=Math.sqrt(d2);
-   var f=Math.min(3.2,12000/d2);
+   if(d>180)continue;
+   d2+=900;d=Math.sqrt(d2);
+   var f=Math.min(1.2,4500/d2);
    force[courses[i].id].x+=dx/d*f;force[courses[i].id].y+=dy/d*f;
    force[courses[j].id].x-=dx/d*f;force[courses[j].id].y-=dy/d*f;
   }
@@ -161,7 +160,7 @@ function buildLayout(){
   courses.forEach(function(c){
    var p=pos[c.id],f=force[c.id];
    var targetX=80+(maxDepth-(depth[c.id]||0))*150;
-   f.x+=(targetX-p.x)*0.018;
+   f.x+=(targetX-p.x)*0.035;
    f.y+=(300-p.y)*0.002;
    vel[c.id].x=(vel[c.id].x+f.x)*0.82;
    vel[c.id].y=(vel[c.id].y+f.y)*0.82;
@@ -248,8 +247,10 @@ function simulate(){
  courses.forEach(function(c){force[c.id]={x:0,y:0}});
  for(var i=0;i<courses.length;i++)for(var j=i+1;j<courses.length;j++){
   var a=layout.pos[courses[i].id],b=layout.pos[courses[j].id];
-  var dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy+900,d=Math.sqrt(d2);
-  var f=Math.min(4.5,18000/d2);
+  var dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy,d=Math.sqrt(d2);
+  if(d>180)continue;
+  d2+=900;d=Math.sqrt(d2);
+  var f=Math.min(1.2,4500/d2);
   force[courses[i].id].x+=dx/d*f;force[courses[i].id].y+=dy/d*f;
   force[courses[j].id].x-=dx/d*f;force[courses[j].id].y-=dy/d*f;
  }
@@ -264,6 +265,9 @@ function simulate(){
  courses.forEach(function(c){
   if(c.id===dragNode)return;
   var p=layout.pos[c.id],f=force[c.id];
+  var targetX=80+(maxDepth-(depth[c.id]||0))*150;
+  f.x+=(targetX-p.x)*0.035;
+  f.y+=(300-p.y)*0.002;
   p.x+=f.x;p.y+=f.y;
   if(Math.abs(f.x)+Math.abs(f.y)>.18)moving=true;
  });
