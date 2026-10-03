@@ -201,7 +201,7 @@ function buildLayout(){
  var minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
  courses.forEach(function(c){var p=pos[c.id];minX=Math.min(minX,p.x);minY=Math.min(minY,p.y);maxX=Math.max(maxX,p.x);maxY=Math.max(maxY,p.y)});
  courses.forEach(function(c){pos[c.id]={x:pos[c.id].x-minX+80,y:pos[c.id].y-minY+80}});
- layout={pos:pos,w:Math.max(800,maxX-minX+160),h:Math.max(600,maxY-minY+160),depth:depth,maxDepth:maxDepth,component:component,components:components};
+ layout={pos:pos,w:Math.max(800,maxX-minX+160),h:Math.max(600,maxY-minY+160),depth:depth,maxDepth:maxDepth,component:component,components:components};\n fitGraph();
 }
 function minimizeCrossings(pos,depth,component,components){
  var byDepth={};
@@ -418,7 +418,7 @@ function forceControl(id,key){var el=document.getElementById(id),out=document.ge
 forceControl("repulsion","repulsion");forceControl("spring","spring");forceControl("tree","tree");
 document.getElementById("search").oninput=function(e){query=e.target.value;render()};
 document.getElementById("category").onchange=function(e){filter=e.target.value;render()};
-document.getElementById("reset").onclick=function(){query="";filter="all";selected=null;document.getElementById("search").value="";document.getElementById("category").value="all";document.getElementById("details").textContent="یک گره را انتخاب کنید. دوبار کلیک صفحه درس را باز می‌کند.";render()};
+document.getElementById("reset").onclick=function(){query="";filter="all";selected=null;fitGraph();document.getElementById("search").value="";document.getElementById("category").value="all";document.getElementById("details").textContent="یک گره را انتخاب کنید. دوبار کلیک صفحه درس را باز می‌کند.";render()};
 var scale=1,tx=0,ty=0,drag=false,last,dragNode=null,simTimer=null;
 function transform(){view.setAttribute("transform","translate("+tx+" "+ty+") scale("+scale+")")}
 function svgPoint(e){
@@ -499,7 +499,7 @@ window.onpointermove=function(e){
   tx+=e.clientX-last.x;ty+=e.clientY-last.y;last={x:e.clientX,y:e.clientY};transform();
  }
 };
-window.onpointerup=function(e){
+window.onresize=function(){fitGraph()};\nwindow.onpointerup=function(e){
  var wasNode=!!dragNode;
  drag=false;dragNode=null;svg.classList.remove("dragging");
  if(wasNode&&svg.releasePointerCapture)try{svg.releasePointerCapture(e.pointerId)}catch(_){}
