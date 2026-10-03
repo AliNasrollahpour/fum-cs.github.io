@@ -157,7 +157,7 @@ function buildLayout(){
 function edgePath(a,b){
  var dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)||1,r=10;
  var ux=dx/d,uy=dy/d,sx=a.x+ux*r,sy=a.y+uy*r,tx=b.x-ux*r,ty=b.y-uy*r;
- var bend=Math.min(90,d*.22),nx=-uy*bend,ny=ux*bend;
+ var bend=Math.min(45,Math.max(0,(d-220)*.12)),nx=-uy*bend,ny=ux*bend;
  return "M "+sx+" "+sy+" C "+(sx+dx*.35+nx)+" "+(sy+dy*.35+ny)+" "+(tx-dx*.35+nx)+" "+(ty-dy*.35+ny)+" "+tx+" "+ty;
 }
 function render(){
@@ -223,14 +223,14 @@ function simulate(){
  for(var i=0;i<courses.length;i++)for(var j=i+1;j<courses.length;j++){
   var a=layout.pos[courses[i].id],b=layout.pos[courses[j].id];
   var dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy+900,d=Math.sqrt(d2);
-  var f=Math.min(1.8,4500/d2);
+  var f=Math.min(4.5,18000/d2);
   force[courses[i].id].x+=dx/d*f;force[courses[i].id].y+=dy/d*f;
   force[courses[j].id].x-=dx/d*f;force[courses[j].id].y-=dy/d*f;
  }
  rels.forEach(function(e){
   var a=layout.pos[e.s],b=layout.pos[e.t];if(!a||!b)return;
   var dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)+1;
-  var f=Math.max(-1.2,Math.min(1.2,(d-150)*0.004));
+  var f=Math.max(-3.5,Math.min(3.5,(d-150)*0.012));
   force[e.s].x+=dx/d*f;force[e.s].y+=dy/d*f;
   force[e.t].x-=dx/d*f;force[e.t].y-=dy/d*f;
  });
@@ -239,7 +239,7 @@ function simulate(){
   if(c.id===dragNode)return;
   var p=layout.pos[c.id],f=force[c.id];
   p.x+=f.x;p.y+=f.y;
-  if(Math.abs(f.x)+Math.abs(f.y)>.08)moving=true;
+  if(Math.abs(f.x)+Math.abs(f.y)>.18)moving=true;
  });
  if(moving||dragNode)render();
  if(moving||dragNode)simTimer=requestAnimationFrame(simulate);
