@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>نمودار پیش‌نیاز دروس | علوم کامپیوتر فردوسی مشهد</title>
+<style>
+:root{--bg:#fff;--panel:#f7f7f8;--text:#171717;--muted:#666;--border:#ddd;--accent:#c62828}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--text)}
+header{padding:18px 22px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+h1{font-size:23px;margin:0 0 5px}.sub,.small{color:var(--muted);font-size:13px}
+.controls{display:flex;gap:8px;flex-wrap:wrap}.controls input,.controls select,.controls button{font:inherit;border:1px solid var(--border);background:#fff;border-radius:7px;padding:8px 10px}.controls input{width:220px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;height:calc(100vh - 92px);min-height:600px}
+main{overflow:hidden;background:#fafafa}svg{width:100%;height:100%;touch-action:none;cursor:grab}svg.dragging{cursor:grabbing}
+.side{border-left:1px solid var(--border);background:var(--panel);padding:14px;overflow:auto}.stats{display:grid;grid-template-columns:1fr 1fr;gap:7px}.stat{background:#fff;border:1px solid var(--border);border-radius:7px;padding:9px}.stat b{display:block;font-size:17px}.stat span{font-size:11px;color:var(--muted)}
+.legend{margin:14px 0;display:grid;gap:7px;font-size:12px}.legend span{display:inline-block;width:12px;height:12px;border-radius:3px;margin-left:6px;vertical-align:-2px}
+#details{border-top:1px solid var(--border);padding-top:12px;line-height:1.7}.notice{background:#fff8e1;border:1px solid #ead7a0;border-radius:7px;padding:8px;margin:10px 0;font-size:12px}
+ul{padding-right:20px}.node rect{stroke:#fff;stroke-width:2;rx:9}.node text{pointer-events:none}.title{font-size:12px;font-weight:700}.cat{font-size:10px}.edge{fill:none;stroke:#777;stroke-width:1.5}.edge.coreq{stroke-dasharray:6 5}.dim{opacity:.12}.selected rect{stroke:#c62828;stroke-width:3}.match rect{stroke:#111;stroke-width:3}
+@media(max-width:850px){.layout{grid-template-columns:1fr;height:auto}.side{border:0;border-top:1px solid var(--border);max-height:400px}.layout main{height:70vh;min-height:500px}}
+</style>
+</head>
+<body>
+<header>
+<div><h1>نمودار وابستگی دروس</h1><div class="sub">علوم کامپیوتر دانشگاه فردوسی مشهد — پیش‌نیازها و هم‌نیازها</div></div>
+<div class="controls"><input id="search" placeholder="جستجوی درس…"><select id="category"><option value="all">همه دروس</option><option value="base">پایه</option><option value="mandatory">الزامی</option><option value="elective">اختیاری</option></select><button id="reset">نمایش همه</button></div>
+</header>
+<div class="layout">
+<main><svg id="graph"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8z" fill="#777"/></marker></defs><g id="view"></g></svg></main>
+<aside class="side">
+<div class="stats"><div class="stat"><b id="count">—</b><span>درس</span></div><div class="stat"><b id="edges">—</b><span>رابطه</span></div><div class="stat"><b id="unresolved">—</b><span>ارجاع حل‌نشده</span></div><div class="stat"><b id="cycles">—</b><span>چرخه</span></div></div>
+<div class="legend"><div><span style="background:#455a64"></span>دروس پایه</div><div><span style="background:#8e2b2b"></span>دروس الزامی</div><div><span style="background:#3949ab"></span>دروس اختیاری</div><div>خط پیوسته: پیش‌نیاز</div><div>خط‌چین: هم‌نیاز</div></div>
+<div id="audit"></div><div id="details" class="small">یک گره را انتخاب کنید. دوبار کلیک صفحه درس را باز می‌کند.</div>
+</aside>
+</div>
+<script>
+var courses=[],rels=[],unresolved=[],selected=null,filter="all",query="";
+var svg=document.getElementById("graph"),view=document.getElementById("view");
+function norm(s){return(s||"").replace(/[\u200c\u200d]/g,"").replace(/[يى]/g,"ی").replace(/ك/g,"ک").replace(/[\u064B-\u065F]/g,"").replace(/\s+/g," ").trim()}
+function cat(b){return b.indexOf("دروس پایه")>=0?"base":b.indexOf("دروس الزامی")>=0?"mandatory":"elective"}
+function id(u){return decodeURIComponent(u.split("/").filter(Boolean).pop())}
+function esc(s){return String(s).replace(/[&<>"']/g,function(m){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[m]})}
+async function load(){
+ var idx=await fetch("/search-index.json").then(function(r){return r.json()});
+ var ds=idx[0].documents.filter(function(d){return d.u&&d.u.indexOf("/docs/curriculum/")===0&&d.b&&d.b.indexOf("برنامه درسی")>=0});
+ var seen={};ds=ds.filter(function(d){if(seen[d.u])return false;seen[d.u]=1;return true});
+ courses=ds.map(function(d){return{id:id(d.u),url:d.u,title:d.t,category:cat(d.b),prereqs:[],coreqs:[],conditions:[]}});
+ var map={};courses.forEach(function(c){map[norm(c.title)]=c});
+ await Promise.all(courses.map(async function(c){
+  var html=await fetch(c.url).then(function(r){return r.text()});
+  var doc=new DOMParser().parseFromString(html,"text/html");
+  var rows=[].slice.call(doc.querySelectorAll("tr"));
+  var pre=rows.find(function(x){return norm(x.cells&&x.cells[0]&&x.cells[0].textContent).indexOf("پیش‌نیاز")===0});
+  var co=rows.find(function(x){return norm(x.cells&&x.cells[0]&&x.cells[0].textContent).indexOf("هم‌نیاز")===0});
+  function parse(row,type){
+   if(!row)return;
+   var raw=norm(row.cells[1]&&row.cells[1].textContent);
+   if(!raw||raw==="ندارد")return;
+   raw.split(/[،,]/).map(function(x){return x.trim()}).filter(Boolean).forEach(function(x){
+    var t=map[norm(x)];
+    if(t){if(type==="pre")c.prereqs.push(t.id);else c.coreqs.push(t.id)}
+    else{c.conditions.push(x);unresolved.push({course:c,ref:x,type:type})}
+   });
+  }
+  parse(pre,"pre");parse(co,"coreq");
+ }));
+ rels=[];
+ courses.forEach(function(c){c.prereqs.forEach(function(p){rels.push({s:p,t:c.id,type:"pre"})});c.coreqs.forEach(function(p){rels.push({s:p,t:c.id,type:"coreq"})})});
+ render();audit();
+}
+function graph(){
+ var level={},adj={};courses.forEach(function(c){level[c.id]=0;adj[c.id]=[]});
+ rels.filter(function(e){return e.type==="pre"}).forEach(function(e){adj[e.s].push(e.t)});
+ for(var k=0;k<courses.length;k++){var changed=false;courses.forEach(function(c){adj[c.id].forEach(function(t){if(level[t]<level[c.id]+1){level[t]=level[c.id]+1;changed=true}})});if(!changed)break}
+ var groups={};courses.forEach(function(c){var l=level[c.id]||0;(groups[l]||(groups[l]=[])).push(c)});
+ var pos={},max=0;
+ Object.keys(groups).forEach(function(l){max=Math.max(max,+l);groups[l].sort(function(a,b){return a.title.localeCompare(b.title,"fa")}).forEach(function(c,i){pos[c.id]={x:+l*285+30,y:i*100+30}})});
+ var h=80;Object.keys(groups).forEach(function(l){h=Math.max(h,groups[l].length*100+60)});
+ return{pos:pos,w:(max+1)*285+290,h:h};
+}
+function render(){
+ var g=graph(),by={};courses.forEach(function(c){by[c.id]=c});
+ view.innerHTML="";svg.setAttribute("viewBox","0 0 "+g.w+" "+g.h);
+ rels.forEach(function(e){var a=g.pos[e.s],b=g.pos[e.t];if(!a||!b)return;var p=document.createElementNS("http://www.w3.org/2000/svg","path");var sx=a.x+230,sy=a.y+36,tx=b.x,ty=b.y+36,dx=Math.max(35,(tx-sx)/2);p.setAttribute("d","M "+sx+" "+sy+" C "+(sx+dx)+" "+sy+" "+(tx-dx)+" "+ty+" "+tx+" "+ty);p.setAttribute("class","edge"+(e.type==="coreq"?" coreq":""));if(selected&&e.s!==selected&&e.t!==selected)p.classList.add("dim");view.appendChild(p)});
+ courses.forEach(function(c){var p=g.pos[c.id],n=document.createElementNS("http://www.w3.org/2000/svg","g");n.setAttribute("transform","translate("+p.x+" "+p.y+")");n.setAttribute("class","node");var visible=filter==="all"||filter===c.category;var match=!query||norm(c.title).indexOf(norm(query))>=0;if(!visible||!match||(selected&&c.id!==selected&&!rels.some(function(e){return(e.s===selected&&e.t===c.id)||(e.t===selected&&e.s===c.id)})))n.classList.add("dim");if(selected===c.id)n.classList.add("selected");if(query&&match)n.classList.add("match");
+ var r=document.createElementNS("http://www.w3.org/2000/svg","rect");r.setAttribute("width",230);r.setAttribute("height",72);r.setAttribute("fill",c.category==="base"?"#455a64":c.category==="mandatory"?"#8e2b2b":"#3949ab");n.appendChild(r);
+ var t=document.createElementNS("http://www.w3.org/2000/svg","text");t.setAttribute("x",115);t.setAttribute("y",29);t.setAttribute("text-anchor","middle");t.setAttribute("fill","#fff");t.setAttribute("class","title");t.textContent=c.title;n.appendChild(t);
+ var ct=document.createElementNS("http://www.w3.org/2000/svg","text");ct.setAttribute("x",115);ct.setAttribute("y",49);ct.setAttribute("text-anchor","middle");ct.setAttribute("fill","#fff");ct.setAttribute("class","cat");ct.textContent=c.category==="base"?"پایه":c.category==="mandatory"?"الزامی":"اختیاری";n.appendChild(ct);
+ n.onclick=function(){selected=c.id;details(c);render()};n.ondblclick=function(){location.href=c.url};view.appendChild(n)});
+ document.getElementById("count").textContent=courses.length;document.getElementById("edges").textContent=rels.length;document.getElementById("unresolved").textContent=unresolved.length;document.getElementById("cycles").textContent=cycles();
+}
+function cycles(){
+ var state={},adj={};courses.forEach(function(c){state[c.id]=0;adj[c.id]=[]});rels.filter(function(e){return e.type==="pre"}).forEach(function(e){adj[e.s].push(e.t)});var n=0;
+ function dfs(v){if(state[v]===1){n++;return}if(state[v]===2)return;state[v]=1;adj[v].forEach(dfs);state[v]=2}
+ courses.forEach(function(c){if(!state[c.id])dfs(c.id)});return n;
+}
+function details(c){
+ var by={};courses.forEach(function(x){by[x.id]=x});
+ function list(a){return a.length?"<ul>"+a.map(function(x){return"<li>"+esc(by[x].title)+"</li>"}).join("")+"</ul>":"<div>ندارد</div>"}
+ var extra=c.conditions.length?'<div class="notice"><b>ارجاع خارج از گراف</b><ul>'+c.conditions.map(function(x){return"<li>"+esc(x)+"</li>"}).join("")+"</ul></div>":"";
+ document.getElementById("details").innerHTML="<b>"+esc(c.title)+"</b><div>پیش‌نیازها:</div>"+list(c.prereqs)+"<div>هم‌نیازها:</div>"+list(c.coreqs)+extra+'<a href="'+c.url+'" style="color:#c62828">صفحه درس</a>';
+}
+function audit(){
+ var a=document.getElementById("audit");if(!unresolved.length){a.innerHTML="<div class='small'>همه پیش‌نیازهای قابل تطبیق به یک درس موجود وصل شدند.</div>";return}
+ a.innerHTML="<div class='notice'><b>"+unresolved.length+" مورد خارج از گراف</b><ul>"+unresolved.map(function(x){return"<li>"+esc(x.course.title)+": "+esc(x.ref)+"</li>"}).join("")+"</ul></div>";
+}
+document.getElementById("search").oninput=function(e){query=e.target.value;render()};
+document.getElementById("category").onchange=function(e){filter=e.target.value;render()};
+document.getElementById("reset").onclick=function(){query="";filter="all";selected=null;document.getElementById("search").value="";document.getElementById("category").value="all";document.getElementById("details").textContent="یک گره را انتخاب کنید. دوبار کلیک صفحه درس را باز می‌کند.";render()};
+var scale=1,tx=0,ty=0,drag=false,last;
+function transform(){view.setAttribute("transform","translate("+tx+" "+ty+") scale("+scale+")")}
+svg.onwheel=function(e){e.preventDefault();scale=Math.max(.35,Math.min(2.5,scale*(e.deltaY<0?1.1:.9)));transform()};
+svg.onpointerdown=function(e){if(e.target.closest(".node"))return;drag=true;last={x:e.clientX,y:e.clientY};svg.classList.add("dragging")};
+window.onpointermove=function(e){if(!drag)return;tx+=e.clientX-last.x;ty+=e.clientY-last.y;last={x:e.clientX,y:e.clientY};transform()};
+window.onpointerup=function(){drag=false;svg.classList.remove("dragging")};
+load().catch(function(e){document.getElementById("details").textContent="خطا در بارگذاری: "+e.message});
+</script>
+</body></html>
