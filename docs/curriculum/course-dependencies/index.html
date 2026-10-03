@@ -114,8 +114,24 @@ async function load(){
  buildLayout();render();audit();
 }
 function buildLayout(){
- var n=courses.length,pos={},vel={},depth={},adj={};
+ var n=courses.length,pos={},vel={},depth={},adj={},component={},components=[];
  if(!n){layout={pos:{},w:800,h:600};return}
+ courses.forEach(function(c){adj[c.id]=[]});
+ rels.forEach(function(e){adj[e.s].push(e.t);adj[e.t].push(e.s)});
+ var componentSeen={};
+ courses.forEach(function(c){
+  if(componentSeen[c.id])return;
+  var members=[],stack=[c.id];componentSeen[c.id]=1;
+  while(stack.length){var v=stack.pop();members.push(v);(adj[v]||[]).forEach(function(u){if(!componentSeen[u]){componentSeen[u]=1;stack.push(u)}})}
+  var index=components.length;members.forEach(function(id){component[id]=index});components.push(members);
+ });
+ var componentSpacing=360;
+ var componentCols=Math.max(1,Math.ceil(Math.sqrt(components.length)));
+ components.forEach(function(members,index){
+  var col=index%componentCols,row=Math.floor(index/componentCols);
+  members._center={x:(col-(componentCols-1)/2)*componentSpacing,y:row*120};
+ });
+ // Rebuild prerequisite adjacency separately for depth calculation.
  courses.forEach(function(c){adj[c.id]=[]});
  rels.filter(function(e){return e.type==="pre"}).forEach(function(e){adj[e.t].push(e.s)});
  function depthOf(id,seen){
@@ -135,7 +151,8 @@ function buildLayout(){
  var radius=Math.max(220,Math.sqrt(n)*42);
  courses.forEach(function(c,i){
   var a=i/n*Math.PI*2;
-  pos[c.id]={x:80+Math.cos(a)*radius*.18,y:300+Math.sin(a)*radius};
+  var comp=components[component[c.id]],center=comp&&comp._center?comp._center:{x:0,y:0};
+  pos[c.id]={x:80+center.x+Math.cos(a)*radius*.18,y:300+center.y+Math.sin(a)*radius};
   vel[c.id]={x:0,y:0};
  });
  for(var iter=0;iter<260;iter++){
@@ -150,12 +167,13 @@ function buildLayout(){
    var leafA=maxDepth?1+da/maxDepth:1;
    var leafB=maxDepth?1+db/maxDepth:1;
    var f=forces.repulsion*Math.min(1.2,4500/d2);
-   force[courses[i].id].x+=dx/d*f*leafA;force[courses[i].id].y+=dy/d*f*leafA;
-   force[courses[j].id].x-=dx/d*f*leafB;force[courses[j].id].y-=dy/d*f*leafB;
+   var verticalRepulsion=0.25;
+   force[courses[i].id].x+=dx/d*f*leafA;force[courses[i].id].y+=dy/d*f*leafA*verticalRepulsion;
+   force[courses[j].id].x-=dx/d*f*leafB;force[courses[j].id].y-=dy/d*f*leafB*verticalRepulsion;
    if(da===db){
     var same=f*.35;
-    force[courses[i].id].x+=dx/d*same;force[courses[i].id].y+=dy/d*same;
-    force[courses[j].id].x-=dx/d*same;force[courses[j].id].y-=dy/d*same;
+    force[courses[i].id].x+=dx/d*same;force[courses[i].id].y+=dy/d*same*verticalRepulsion;
+    force[courses[j].id].x-=dx/d*same;force[courses[j].id].y-=dy/d*same*verticalRepulsion;
    }
   }
   rels.forEach(function(e){
@@ -165,7 +183,7 @@ function buildLayout(){
    force[e.s].x+=dx/d*f;force[e.s].y+=dy/d*f;
    force[e.t].x-=dx/d*f;force[e.t].y-=dy/d*f;
   });
-  var tree=treeBoidForce(pos,depth,maxDepth,courses.map(function(c){return c.id}),pos);
+  var tree=treeBoidForce(pos,depth,maxDepth,courses.map(function(c){return c.id}),pos,component,components);
   courses.forEach(function(c){
    var p=pos[c.id],f=force[c.id];
    f.x+=tree[c.id].x;f.y+=tree[c.id].y;
@@ -181,7 +199,7 @@ function buildLayout(){
  var minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
  courses.forEach(function(c){var p=pos[c.id];minX=Math.min(minX,p.x);minY=Math.min(minY,p.y);maxX=Math.max(maxX,p.x);maxY=Math.max(maxY,p.y)});
  courses.forEach(function(c){pos[c.id]={x:pos[c.id].x-minX+80,y:pos[c.id].y-minY+80}});
- layout={pos:pos,w:Math.max(800,maxX-minX+160),h:Math.max(600,maxY-minY+160),depth:depth,maxDepth:maxDepth};
+ layout={pos:pos,w:Math.max(800,maxX-minX+160),h:Math.max(600,maxY-minY+160),depth:depth,maxDepth:maxDepth,component:component,components:components};
 }
 function edgePath(a,b){
  var dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)||1,r=10;
@@ -227,11 +245,12 @@ function resolveCollisions(pos,skipId){
   }
  }
 }
-function treeBoidForce(pos,depth,maxDepth,ids,base){
+function treeBoidForce(pos,depth,maxDepth,ids,base,component,components){
  var force={};ids.forEach(function(id){force[id]={x:0,y:0}});
  var radius=240;
  var depthGap=140+forces.repulsion*45;
  var anchorY=80;
+ var componentPull=0.012;
 
  ids.forEach(function(id){
   var p=pos[id],d=depth[id]||0;
@@ -240,6 +259,13 @@ function treeBoidForce(pos,depth,maxDepth,ids,base){
   // Each depth has its own horizontal target line.
   // Repulsion controls the distance between those lines.
   force[id].y+=(targetY-p.y)*0.08*forces.tree;
+  var members=components[component[id]];
+  if(members&&members.length>1){
+   var cx=0,cy=0;
+   members.forEach(function(other){cx+=pos[other].x;cy+=pos[other].y});
+   cx/=members.length;cy/=members.length;
+   force[id].x+=(cx-p.x)*componentPull*forces.tree;
+  }
 
   var sx=0,sy=0,ay=0,count=0;
   ids.forEach(function(other){
@@ -359,12 +385,13 @@ function simulate(){
   var leafA=layout.maxDepth?1+da/layout.maxDepth:1;
   var leafB=layout.maxDepth?1+db/layout.maxDepth:1;
   var f=forces.repulsion*Math.min(1.2,4500/d2);
-  force[courses[i].id].x+=dx/d*f*leafA;force[courses[i].id].y+=dy/d*f*leafA;
-  force[courses[j].id].x-=dx/d*f*leafB;force[courses[j].id].y-=dy/d*f*leafB;
+  var verticalRepulsion=0.25;
+  force[courses[i].id].x+=dx/d*f*leafA;force[courses[i].id].y+=dy/d*f*leafA*verticalRepulsion;
+  force[courses[j].id].x-=dx/d*f*leafB;force[courses[j].id].y-=dy/d*f*leafB*verticalRepulsion;
   if(da===db){
    var same=f*.35;
-   force[courses[i].id].x+=dx/d*same;force[courses[i].id].y+=dy/d*same;
-   force[courses[j].id].x-=dx/d*same;force[courses[j].id].y-=dy/d*same;
+   force[courses[i].id].x+=dx/d*same;force[courses[i].id].y+=dy/d*same*verticalRepulsion;
+   force[courses[j].id].x-=dx/d*same;force[courses[j].id].y-=dy/d*same*verticalRepulsion;
   }
  }
  rels.forEach(function(e){
@@ -374,7 +401,7 @@ function simulate(){
   force[e.s].x+=dx/d*f;force[e.s].y+=dy/d*f;
   force[e.t].x-=dx/d*f;force[e.t].y-=dy/d*f;
  });
- var tree=treeBoidForce(layout.pos,layout.depth,layout.maxDepth,courses.map(function(c){return c.id}),layout.pos);
+ var tree=treeBoidForce(layout.pos,layout.depth,layout.maxDepth,courses.map(function(c){return c.id}),layout.pos,layout.component,layout.components);
  var moving=false;
  courses.forEach(function(c){
   if(c.id===dragNode)return;
