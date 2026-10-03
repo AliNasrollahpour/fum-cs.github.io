@@ -178,7 +178,8 @@ function buildLayout(){
   rels.forEach(function(e){
    var a=pos[e.s],b=pos[e.t];if(!a||!b)return;
    var dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)+1;
-   var f=forces.spring*Math.max(-3.5,Math.min(3.5,(d-150)*0.012));
+   var rest=110+forces.spring*55;
+   var f=forces.spring*Math.max(-6,Math.min(6,(d-rest)*0.018));
    force[e.s].x+=dx/d*f;force[e.s].y+=dy/d*f;
    force[e.t].x-=dx/d*f;force[e.t].y-=dy/d*f;
   });
@@ -204,7 +205,8 @@ function buildLayout(){
  layout={pos:pos,w:Math.max(800,maxX-minX+160),h:Math.max(600,maxY-minY+160),depth:depth,maxDepth:maxDepth,component:component,components:components};
  fitGraph();
 }
-function minimizeCrossings(pos,depth,component,components){
+function minimizeCrossings(pos,depth,component,components,strength){
+ strength=strength==null?.35:strength;
  var byDepth={};
  courses.forEach(function(c){
   var d=depth[c.id]||0;
@@ -231,7 +233,7 @@ function minimizeCrossings(pos,depth,component,components){
     var spacing=90;
     var target=(i-(layer.length-1)/2)*spacing;
     var comp=components[component[c.id]],center=comp&&comp._center?comp._center.x:0;
-    pos[c.id].x+=(target+80+center-pos[c.id].x)*0.35;
+    pos[c.id].x+=(target+80+center-pos[c.id].x)*strength;
    });
   }
   for(var d=maxD-1;d>=0;d--){
@@ -308,9 +310,9 @@ function resolveCollisions(pos,skipId){
 function treeBoidForce(pos,depth,maxDepth,ids,base,component,components){
  var force={};ids.forEach(function(id){force[id]={x:0,y:0}});
  var radius=240;
- var depthGap=140+forces.repulsion*45;
+ var depthGap=110+forces.repulsion*55;
  var anchorY=80;
- var componentPull=0.012;
+ var componentPull=0.004+forces.tree*0.002;
 
  ids.forEach(function(id){
   var p=pos[id],d=depth[id]||0;
@@ -318,7 +320,7 @@ function treeBoidForce(pos,depth,maxDepth,ids,base,component,components){
 
   // Each depth has its own horizontal target line.
   // Repulsion controls the distance between those lines.
-  force[id].y+=(targetY-p.y)*0.08*forces.tree;
+  force[id].y+=(targetY-p.y)*0.018*forces.tree;
   var members=components[component[id]];
   if(members&&members.length>1){
    var cx=0,cy=0;
@@ -452,13 +454,15 @@ function simulate(){
  for(var i=0;i<courses.length;i++)for(var j=i+1;j<courses.length;j++){
   var a=layout.pos[courses[i].id],b=layout.pos[courses[j].id];
   var dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy,d=Math.sqrt(d2);
-  if(d>180)continue;
+  if(d>90+forces.repulsion*55)continue;
   d2+=900;d=Math.sqrt(d2);
   var da=layout.depth[courses[i].id]||0,db=layout.depth[courses[j].id]||0;
   var leafA=layout.maxDepth?1+da/layout.maxDepth:1;
   var leafB=layout.maxDepth?1+db/layout.maxDepth:1;
-  var f=forces.repulsion*Math.min(1.2,4500/d2);
-  var verticalRepulsion=0.08;
+  var radius=90+forces.repulsion*55;
+  if(d>radius)continue;
+  var f=forces.repulsion*Math.min(2.4,7000/d2);
+  var verticalRepulsion=0.25+Math.max(0,1-forces.tree/10)*0.45;
   force[courses[i].id].x+=dx/d*f*leafA;force[courses[i].id].y+=dy/d*f*leafA*verticalRepulsion;
   force[courses[j].id].x-=dx/d*f*leafB;force[courses[j].id].y-=dy/d*f*leafB*verticalRepulsion;
   if(da===db){
@@ -470,7 +474,8 @@ function simulate(){
  rels.forEach(function(e){
   var a=layout.pos[e.s],b=layout.pos[e.t];if(!a||!b)return;
   var dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)+1;
-  var f=forces.spring*Math.max(-3.5,Math.min(3.5,(d-150)*0.012));
+  var rest=110+forces.spring*55;
+  var f=forces.spring*Math.max(-6,Math.min(6,(d-rest)*0.018));
   force[e.s].x+=dx/d*f;force[e.s].y+=dy/d*f;
   force[e.t].x-=dx/d*f;force[e.t].y-=dy/d*f;
  });
@@ -481,15 +486,14 @@ function simulate(){
   var p=layout.pos[c.id],f=force[c.id];
   f.x+=tree[c.id].x;f.y+=tree[c.id].y;
   f.x+=(80-p.x)*0.002;
-  p.x+=f.x*0.32;p.y+=f.y*0.12;
-  p.y=80+(layout.depth[c.id]||0)*(140+forces.repulsion*45);
+  p.x+=f.x*0.32;p.y+=f.y*0.22;
   if(Math.abs(f.x)+Math.abs(f.y)>.06)moving=true;
  });
  resolveCollisions(layout.pos,dragNode);
  courses.forEach(function(c){
-  if(c.id!==dragNode)layout.pos[c.id].y=80+(layout.depth[c.id]||0)*(140+forces.repulsion*45);
+  if(c.id!==dragNode && forces.tree>8.5)layout.pos[c.id].y=layout.pos[c.id].y*0.82+(80+(layout.depth[c.id]||0)*(110+forces.repulsion*55))*0.18;
  });
- if(!dragNode)minimizeCrossings(layout.pos,layout.depth,layout.component,layout.components);
+ if(!dragNode)minimizeCrossings(layout.pos,layout.depth,layout.component,layout.components,0.02+forces.tree*0.045);
  render();
  if(simulationActive||moving||dragNode)simTimer=requestAnimationFrame(simulate);
 }
