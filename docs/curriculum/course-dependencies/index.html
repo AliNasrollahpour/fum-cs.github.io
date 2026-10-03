@@ -33,9 +33,9 @@ ul{padding-right:20px}.node rect{stroke:#fff;stroke-width:2;rx:9}.node text{poin
 </aside>
 </div>
 <script>
-var courses=[],rels=[],unresolved=[],selected=null,filter="all",query="";
+var courses=[],rels=[],unresolved=[],selected=null,filter="all",query="",layout=null;
 var svg=document.getElementById("graph"),view=document.getElementById("view");
-function norm(s){return(s||"").replace(/[\u200c\u200d]/g,"").replace(/[يى]/g,"ی").replace(/ك/g,"ک").replace(/[\u064B-\u065F]/g,"").replace(/\s+/g," ").trim()}
+function norm(s){return(s||"").replace(/[\\u200c\\u200d]/g,"").replace(/[يى]/g,"ی").replace(/ك/g,"ک").replace(/[\\u064B-\\u065F]/g,"").replace(/\\s+/g," ").trim()}
 function cat(b){return b.indexOf("دروس پایه")>=0?"base":b.indexOf("دروس الزامی")>=0?"mandatory":"elective"}
 function id(u){return decodeURIComponent(u.split("/").filter(Boolean).pop())}
 function esc(s){return String(s).replace(/[&<>"']/g,function(m){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[m]})}
@@ -65,33 +65,55 @@ async function load(){
  }));
  rels=[];
  courses.forEach(function(c){c.prereqs.forEach(function(p){rels.push({s:p,t:c.id,type:"pre"})});c.coreqs.forEach(function(p){rels.push({s:p,t:c.id,type:"coreq"})})});
- render();audit();
+ buildLayout();render();audit();
 }
-function graph(){
- var level={},adj={};courses.forEach(function(c){level[c.id]=0;adj[c.id]=[]});
- rels.filter(function(e){return e.type==="pre"}).forEach(function(e){adj[e.s].push(e.t)});
- for(var k=0;k<courses.length;k++){var changed=false;courses.forEach(function(c){adj[c.id].forEach(function(t){if(level[t]<level[c.id]+1){level[t]=level[c.id]+1;changed=true}})});if(!changed)break}
- var groups={};courses.forEach(function(c){var l=level[c.id]||0;(groups[l]||(groups[l]=[])).push(c)});
+function buildLayout(){
+ var indeg={},adj={};courses.forEach(function(c){indeg[c.id]=0;adj[c.id]=[]});
+ rels.filter(function(e){return e.type==="pre"}).forEach(function(e){adj[e.s].push(e.t);indeg[e.t]++});
+ var queue=courses.filter(function(c){return indeg[c.id]===0}).map(function(c){return c.id}),level={};
+ queue.forEach(function(x){level[x]=0});
+ for(var i=0;i<queue.length;i++){var v=queue[i];adj[v].forEach(function(w){level[w]=Math.max(level[w]||0,(level[v]||0)+1);indeg[w]--;if(indeg[w]===0)queue.push(w)})}
+ courses.forEach(function(c){if(level[c.id]===undefined)level[c.id]=0});
+ var groups={};courses.forEach(function(c){var l=level[c.id];(groups[l]||(groups[l]=[])).push(c)});
  var pos={},max=0;
- Object.keys(groups).forEach(function(l){max=Math.max(max,+l);groups[l].sort(function(a,b){return a.title.localeCompare(b.title,"fa")}).forEach(function(c,i){pos[c.id]={x:+l*285+30,y:i*100+30}})});
- var h=80;Object.keys(groups).forEach(function(l){h=Math.max(h,groups[l].length*100+60)});
- return{pos:pos,w:(max+1)*285+290,h:h};
+ Object.keys(groups).forEach(function(l){max=Math.max(max,+l);groups[l].sort(function(a,b){return a.title.localeCompare(b.title,"fa")});groups[l].forEach(function(c,i){pos[c.id]={x:+l*300+35,y:i*92+35}})});
+ var h=100;Object.keys(groups).forEach(function(l){h=Math.max(h,groups[l].length*92+70)});
+ layout={pos:pos,w:(max+1)*300+300,h:h};
+}
+function edgePath(a,b){
+ var sx=a.x+230,sy=a.y+36,tx=b.x,ty=b.y+36;
+ if(tx<=sx){return "M "+sx+" "+sy+" C "+(sx+70)+" "+sy+" "+(tx-70)+" "+ty+" "+tx+" "+ty}
+ var dx=Math.max(45,(tx-sx)/2);
+ return "M "+sx+" "+sy+" C "+(sx+dx)+" "+sy+" "+(tx-dx)+" "+ty+" "+tx+" "+ty;
 }
 function render(){
- var g=graph(),by={};courses.forEach(function(c){by[c.id]=c});
- view.innerHTML="";svg.setAttribute("viewBox","0 0 "+g.w+" "+g.h);
- rels.forEach(function(e){var a=g.pos[e.s],b=g.pos[e.t];if(!a||!b)return;var p=document.createElementNS("http://www.w3.org/2000/svg","path");var sx=a.x+230,sy=a.y+36,tx=b.x,ty=b.y+36,dx=Math.max(35,(tx-sx)/2);p.setAttribute("d","M "+sx+" "+sy+" C "+(sx+dx)+" "+sy+" "+(tx-dx)+" "+ty+" "+tx+" "+ty);p.setAttribute("class","edge"+(e.type==="coreq"?" coreq":""));if(selected&&e.s!==selected&&e.t!==selected)p.classList.add("dim");view.appendChild(p)});
- courses.forEach(function(c){var p=g.pos[c.id],n=document.createElementNS("http://www.w3.org/2000/svg","g");n.setAttribute("transform","translate("+p.x+" "+p.y+")");n.setAttribute("class","node");var visible=filter==="all"||filter===c.category;var match=!query||norm(c.title).indexOf(norm(query))>=0;if(!visible||!match||(selected&&c.id!==selected&&!rels.some(function(e){return(e.s===selected&&e.t===c.id)||(e.t===selected&&e.s===c.id)})))n.classList.add("dim");if(selected===c.id)n.classList.add("selected");if(query&&match)n.classList.add("match");
- var r=document.createElementNS("http://www.w3.org/2000/svg","rect");r.setAttribute("width",230);r.setAttribute("height",72);r.setAttribute("fill",c.category==="base"?"#455a64":c.category==="mandatory"?"#8e2b2b":"#3949ab");n.appendChild(r);
- var t=document.createElementNS("http://www.w3.org/2000/svg","text");t.setAttribute("x",115);t.setAttribute("y",29);t.setAttribute("text-anchor","middle");t.setAttribute("fill","#fff");t.setAttribute("class","title");t.textContent=c.title;n.appendChild(t);
- var ct=document.createElementNS("http://www.w3.org/2000/svg","text");ct.setAttribute("x",115);ct.setAttribute("y",49);ct.setAttribute("text-anchor","middle");ct.setAttribute("fill","#fff");ct.setAttribute("class","cat");ct.textContent=c.category==="base"?"پایه":c.category==="mandatory"?"الزامی":"اختیاری";n.appendChild(ct);
- n.onclick=function(){selected=c.id;details(c);render()};n.ondblclick=function(){location.href=c.url};view.appendChild(n)});
+ view.innerHTML="";
+ svg.setAttribute("viewBox","0 0 "+layout.w+" "+layout.h);
+ var by={};courses.forEach(function(c){by[c.id]=c});
+ rels.forEach(function(e){
+  var a=layout.pos[e.s],b=layout.pos[e.t];if(!a||!b)return;
+  var p=document.createElementNS("http://www.w3.org/2000/svg","path");
+  p.setAttribute("d",edgePath(a,b));p.setAttribute("class","edge"+(e.type==="coreq"?" coreq":""));
+  p.setAttribute("marker-end","url(#arrow)");
+  if(selected&&e.s!==selected&&e.t!==selected)p.classList.add("dim");
+  view.appendChild(p);
+ });
+ courses.forEach(function(c){
+  var p=layout.pos[c.id],n=document.createElementNS("http://www.w3.org/2000/svg","g");
+  n.setAttribute("transform","translate("+p.x+" "+p.y+")");n.setAttribute("class","node");
+  var visible=filter==="all"||filter===c.category,match=!query||norm(c.title).indexOf(norm(query))>=0;
+  if(!visible||!match||(selected&&c.id!==selected&&!rels.some(function(e){return(e.s===selected&&e.t===c.id)||(e.t===selected&&e.s===c.id)})))n.classList.add("dim");
+  if(selected===c.id)n.classList.add("selected");if(query&&match)n.classList.add("match");
+  var r=document.createElementNS("http://www.w3.org/2000/svg","rect");r.setAttribute("width",230);r.setAttribute("height",72);r.setAttribute("fill",c.category==="base"?"#455a64":c.category==="mandatory"?"#8e2b2b":"#3949ab");n.appendChild(r);
+  var t=document.createElementNS("http://www.w3.org/2000/svg","text");t.setAttribute("x",115);t.setAttribute("y",29);t.setAttribute("text-anchor","middle");t.setAttribute("fill","#fff");t.setAttribute("class","title");t.textContent=c.title;n.appendChild(t);
+  var ct=document.createElementNS("http://www.w3.org/2000/svg","text");ct.setAttribute("x",115);ct.setAttribute("y",49);ct.setAttribute("text-anchor","middle");ct.setAttribute("fill","#fff");ct.setAttribute("class","cat");ct.textContent=c.category==="base"?"پایه":c.category==="mandatory"?"الزامی":"اختیاری";n.appendChild(ct);
+  n.onclick=function(){selected=c.id;details(c);render()};n.ondblclick=function(){location.href=c.url};view.appendChild(n)
+ });
  document.getElementById("count").textContent=courses.length;document.getElementById("edges").textContent=rels.length;document.getElementById("unresolved").textContent=unresolved.length;document.getElementById("cycles").textContent=cycles();
 }
 function cycles(){
  var state={},adj={};courses.forEach(function(c){state[c.id]=0;adj[c.id]=[]});rels.filter(function(e){return e.type==="pre"}).forEach(function(e){adj[e.s].push(e.t)});var n=0;
- function dfs(v){if(state[v]===1){n++;return}if(state[v]===2)return;state[v]=1;adj[v].forEach(dfs);state[v]=2}
- courses.forEach(function(c){if(!state[c.id])dfs(c.id)});return n;
+ function dfs(v){if(state[v]===1){n++;return}if(state[v]===2)return;state[v]=1;adj[v].forEach(dfs);state[v]=2}courses.forEach(function(c){if(!state[c.id])dfs(c.id)});return n;
 }
 function details(c){
  var by={};courses.forEach(function(x){by[x.id]=x});
@@ -100,15 +122,14 @@ function details(c){
  document.getElementById("details").innerHTML="<b>"+esc(c.title)+"</b><div>پیش‌نیازها:</div>"+list(c.prereqs)+"<div>هم‌نیازها:</div>"+list(c.coreqs)+extra+'<a href="'+c.url+'" style="color:#c62828">صفحه درس</a>';
 }
 function audit(){
- var a=document.getElementById("audit");if(!unresolved.length){a.innerHTML="<div class='small'>همه پیش‌نیازهای قابل تطبیق به یک درس موجود وصل شدند.</div>";return}
- a.innerHTML="<div class='notice'><b>"+unresolved.length+" مورد خارج از گراف</b><ul>"+unresolved.map(function(x){return"<li>"+esc(x.course.title)+": "+esc(x.ref)+"</li>"}).join("")+"</ul></div>";
+ var a=document.getElementById("audit");a.innerHTML=unresolved.length?"<div class='notice'><b>"+unresolved.length+" مورد خارج از گراف</b><ul>"+unresolved.map(function(x){return"<li>"+esc(x.course.title)+": "+esc(x.ref)+"</li>"}).join("")+"</ul></div>":"<div class='small'>همه ارجاعات به دروس موجود متصل شدند.</div>";
 }
 document.getElementById("search").oninput=function(e){query=e.target.value;render()};
 document.getElementById("category").onchange=function(e){filter=e.target.value;render()};
 document.getElementById("reset").onclick=function(){query="";filter="all";selected=null;document.getElementById("search").value="";document.getElementById("category").value="all";document.getElementById("details").textContent="یک گره را انتخاب کنید. دوبار کلیک صفحه درس را باز می‌کند.";render()};
 var scale=1,tx=0,ty=0,drag=false,last;
 function transform(){view.setAttribute("transform","translate("+tx+" "+ty+") scale("+scale+")")}
-svg.onwheel=function(e){e.preventDefault();scale=Math.max(.35,Math.min(2.5,scale*(e.deltaY<0?1.1:.9)));transform()};
+svg.onwheel=function(e){e.preventDefault();scale=Math.max(.45,Math.min(2.2,scale*(e.deltaY<0?1.08:.925)));transform()};
 svg.onpointerdown=function(e){if(e.target.closest(".node"))return;drag=true;last={x:e.clientX,y:e.clientY};svg.classList.add("dragging")};
 window.onpointermove=function(e){if(!drag)return;tx+=e.clientX-last.x;ty+=e.clientY-last.y;last={x:e.clientX,y:e.clientY};transform()};
 window.onpointerup=function(){drag=false;svg.classList.remove("dragging")};
