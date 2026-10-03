@@ -181,7 +181,10 @@ function render(){
   var r=document.createElementNS("http://www.w3.org/2000/svg","circle");r.setAttribute("r",9);r.setAttribute("fill",c.category==="base"?"#455a64":c.category==="mandatory"?"#8e2b2b":"#3949ab");n.appendChild(r);
   var t=document.createElementNS("http://www.w3.org/2000/svg","text");t.setAttribute("x",16);t.setAttribute("y",4);t.setAttribute("text-anchor","start");t.setAttribute("fill","var(--text)");t.setAttribute("class","title");t.textContent=c.title;n.appendChild(t);
   var ct=document.createElementNS("http://www.w3.org/2000/svg","text");ct.setAttribute("x",16);ct.setAttribute("y",20);ct.setAttribute("text-anchor","start");ct.setAttribute("fill","var(--muted)");ct.setAttribute("class","cat");ct.textContent=c.category==="base"?"پایه":c.category==="mandatory"?"الزامی":"اختیاری";n.appendChild(ct);
-  n.onclick=function(){selected=c.id;details(c);render()};n.ondblclick=function(){location.href=sitePath(c.url)};view.appendChild(n)
+  n.onpointerdown=function(e){nodePointerDown(c,e)};
+n.onclick=function(e){if(e.detail>1)return;selected=c.id;details(c);render()};
+n.ondblclick=function(){location.href=sitePath(c.url)};
+view.appendChild(n)
  });
  document.getElementById("count").textContent=courses.length;document.getElementById("edges").textContent=rels.length;document.getElementById("unresolved").textContent=unresolved.length;document.getElementById("cycles").textContent=cycles();
 }
@@ -201,12 +204,68 @@ function audit(){
 document.getElementById("search").oninput=function(e){query=e.target.value;render()};
 document.getElementById("category").onchange=function(e){filter=e.target.value;render()};
 document.getElementById("reset").onclick=function(){query="";filter="all";selected=null;document.getElementById("search").value="";document.getElementById("category").value="all";document.getElementById("details").textContent="یک گره را انتخاب کنید. دوبار کلیک صفحه درس را باز می‌کند.";render()};
-var scale=1,tx=0,ty=0,drag=false,last;
+var scale=1,tx=0,ty=0,drag=false,last,dragNode=null,simTimer=null;
 function transform(){view.setAttribute("transform","translate("+tx+" "+ty+") scale("+scale+")")}
+function svgPoint(e){
+ var p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;
+ var m=svg.getScreenCTM();if(m)return p.matrixTransform(m.inverse());
+ return {x:e.clientX,y:e.clientY};
+}
+function startSimulation(){
+ if(simTimer)return;
+ simTimer=requestAnimationFrame(simulate);
+}
+function simulate(){
+ simTimer=null;
+ if(!courses.length||!layout)return;
+ var force={};
+ courses.forEach(function(c){force[c.id]={x:0,y:0}});
+ for(var i=0;i<courses.length;i++)for(var j=i+1;j<courses.length;j++){
+  var a=layout.pos[courses[i].id],b=layout.pos[courses[j].id];
+  var dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy+900,d=Math.sqrt(d2);
+  var f=Math.min(1.8,4500/d2);
+  force[courses[i].id].x+=dx/d*f;force[courses[i].id].y+=dy/d*f;
+  force[courses[j].id].x-=dx/d*f;force[courses[j].id].y-=dy/d*f;
+ }
+ rels.forEach(function(e){
+  var a=layout.pos[e.s],b=layout.pos[e.t];if(!a||!b)return;
+  var dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)+1;
+  var f=Math.max(-1.2,Math.min(1.2,(d-150)*0.004));
+  force[e.s].x+=dx/d*f;force[e.s].y+=dy/d*f;
+  force[e.t].x-=dx/d*f;force[e.t].y-=dy/d*f;
+ });
+ var moving=false;
+ courses.forEach(function(c){
+  if(c.id===dragNode)return;
+  var p=layout.pos[c.id],f=force[c.id];
+  p.x+=f.x;p.y+=f.y;
+  if(Math.abs(f.x)+Math.abs(f.y)>.08)moving=true;
+ });
+ if(moving||dragNode)render();
+ if(moving||dragNode)simTimer=requestAnimationFrame(simulate);
+}
+function nodePointerDown(c,e){
+ e.stopPropagation();
+ dragNode=c.id;drag=true;
+ last=svgPoint(e);
+ svg.classList.add("dragging");
+ if(svg.setPointerCapture)svg.setPointerCapture(e.pointerId);
+ startSimulation();
+}
 svg.onwheel=function(e){e.preventDefault();scale=Math.max(.45,Math.min(2.2,scale*(e.deltaY<0?1.08:.925)));transform()};
-svg.onpointerdown=function(e){if(e.target.closest(".node"))return;drag=true;last={x:e.clientX,y:e.clientY};svg.classList.add("dragging")};
-window.onpointermove=function(e){if(!drag)return;tx+=e.clientX-last.x;ty+=e.clientY-last.y;last={x:e.clientX,y:e.clientY};transform()};
-window.onpointerup=function(){drag=false;svg.classList.remove("dragging")};
+svg.onpointerdown=function(e){if(e.target.closest(".node"))return;drag=true;dragNode=null;last={x:e.clientX,y:e.clientY};svg.classList.add("dragging")};
+window.onpointermove=function(e){
+ if(!drag)return;
+ if(dragNode){
+  var p=svgPoint(e),q=layout.pos[dragNode];
+  q.x=p.x;q.y=p.y;render();startSimulation();
+ }else{
+  tx+=e.clientX-last.x;ty+=e.clientY-last.y;last={x:e.clientX,y:e.clientY};transform();
+ }
+};
+window.onpointerup=function(){
+ drag=false;dragNode=null;svg.classList.remove("dragging");
+};
 load().catch(function(e){document.getElementById("details").textContent="خطا در بارگذاری: "+e.message});
 
 </script></body></html>
