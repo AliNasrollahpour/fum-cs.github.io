@@ -181,8 +181,13 @@ function render(){
   var r=document.createElementNS("http://www.w3.org/2000/svg","circle");r.setAttribute("r",9);r.setAttribute("fill",c.category==="base"?"#455a64":c.category==="mandatory"?"#8e2b2b":"#3949ab");n.appendChild(r);
   var t=document.createElementNS("http://www.w3.org/2000/svg","text");t.setAttribute("x",16);t.setAttribute("y",4);t.setAttribute("text-anchor","start");t.setAttribute("fill","var(--text)");t.setAttribute("class","title");t.textContent=c.title;n.appendChild(t);
   var ct=document.createElementNS("http://www.w3.org/2000/svg","text");ct.setAttribute("x",16);ct.setAttribute("y",20);ct.setAttribute("text-anchor","start");ct.setAttribute("fill","var(--muted)");ct.setAttribute("class","cat");ct.textContent=c.category==="base"?"پایه":c.category==="mandatory"?"الزامی":"اختیاری";n.appendChild(ct);
-  n.onpointerdown=function(e){nodePointerDown(c,e)};
-n.onclick=function(e){if(e.detail>1)return;selected=c.id;details(c);render()};
+  n.onpointerdown=function(e){
+ nodePointerDown(c,e);
+};
+n.onclick=function(e){
+ if(e.detail>1)return;
+ selected=c.id;details(c);render();
+};
 n.ondblclick=function(){location.href=sitePath(c.url)};
 view.appendChild(n)
  });
@@ -263,8 +268,10 @@ window.onpointermove=function(e){
   tx+=e.clientX-last.x;ty+=e.clientY-last.y;last={x:e.clientX,y:e.clientY};transform();
  }
 };
-window.onpointerup=function(){
+window.onpointerup=function(e){
+ var wasNode=!!dragNode;
  drag=false;dragNode=null;svg.classList.remove("dragging");
+ if(wasNode&&svg.releasePointerCapture)try{svg.releasePointerCapture(e.pointerId)}catch(_){}
 };
 load().catch(function(e){document.getElementById("details").textContent="خطا در بارگذاری: "+e.message});
 
