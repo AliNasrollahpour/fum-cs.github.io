@@ -22,7 +22,7 @@ ul{padding-right:20px}.node circle{stroke:var(--bg);stroke-width:2}.node text{po
 <body>
 <header>
 <div><h1>نمودار وابستگی دروس</h1><div class="sub">علوم کامپیوتر دانشگاه فردوسی مشهد — پیش‌نیازها و هم‌نیازها</div></div>
-<div class="controls"><input id="search" placeholder="جستجوی درس…"><select id="category"><option value="all">همه دروس</option><option value="base">پایه</option><option value="mandatory">الزامی</option><option value="elective">اختیاری</option></select><label class="force">دفع گره‌ها <input id="repulsion" type="range" min="0" max="1" step="0.01" value="0.5"><span id="repulsionValue">0.50</span></label><label class="force">کشش یال‌ها <input id="spring" type="range" min="0" max="1" step="0.01" value="0.5"><span id="springValue">0.50</span></label><label class="force">چیدمان درختی <input id="tree" type="range" min="0" max="1" step="0.01" value="0.5"><span id="treeValue">0.50</span></label><button id="reset">نمایش همه</button></div>
+<div class="controls"><input id="search" placeholder="جستجوی درس…"><select id="category"><option value="all">همه دروس</option><option value="base">پایه</option><option value="mandatory">الزامی</option><option value="elective">اختیاری</option></select><label class="force">دفع گره‌ها <input id="repulsion" type="range" min="0" max="10" step="0.1" value="1"><span id="repulsionValue">1.0</span></label><label class="force">کشش یال‌ها <input id="spring" type="range" min="0" max="10" step="0.1" value="1"><span id="springValue">1.0</span></label><label class="force">چیدمان درختی <input id="tree" type="range" min="0" max="10" step="0.1" value="1"><span id="treeValue">1.0</span></label><button id="reset">نمایش همه</button></div>
 </header>
 <div class="layout">
 <main><svg id="graph"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8z" fill="#777"/></marker></defs><g id="view"></g></svg></main>
@@ -33,7 +33,7 @@ ul{padding-right:20px}.node circle{stroke:var(--bg);stroke-width:2}.node text{po
 </aside>
 </div>
 <script>
-var courses=[],rels=[],unresolved=[],selected=null,filter="all",query="",layout=null;var forces={repulsion:.5,spring:.5,tree:.5};
+var courses=[],rels=[],unresolved=[],selected=null,filter="all",query="",layout=null;var forces={repulsion:1,spring:1,tree:1};
 var svg=document.getElementById("graph"),view=document.getElementById("view");
 function norm(s){return(s||"").replace(/[\u200c\u200d]/g,"").replace(/[يى]/g,"ی").replace(/ك/g,"ک").replace(/[\u064B-\u065F]/g,"").replace(/\s+/g," ").trim()}
 function cat(b){return b.indexOf("دروس پایه")>=0?"base":b.indexOf("دروس الزامی")>=0?"mandatory":"elective"}
@@ -226,7 +226,7 @@ function details(c){
 function audit(){
  var a=document.getElementById("audit");a.innerHTML=unresolved.length?"<div class='notice'><b>"+unresolved.length+" مورد خارج از گراف</b><ul>"+unresolved.map(function(x){return"<li>"+esc(x.course.title)+": "+esc(x.ref)+"</li>"}).join("")+"</ul></div>":"<div class='small'>همه ارجاعات به دروس موجود متصل شدند.</div>";
 }
-function forceControl(id,key){var el=document.getElementById(id),out=document.getElementById(id+"Value");el.oninput=function(){forces[key]=Number(el.value);out.textContent=Number(el.value).toFixed(2);startSimulation()}}
+function forceControl(id,key){var el=document.getElementById(id),out=document.getElementById(id+"Value");el.oninput=function(){forces[key]=Number(el.value);out.textContent=Number(el.value).toFixed(1);startSimulation()}}
 forceControl("repulsion","repulsion");forceControl("spring","spring");forceControl("tree","tree");
 document.getElementById("search").oninput=function(e){query=e.target.value;render()};
 document.getElementById("category").onchange=function(e){filter=e.target.value;render()};
