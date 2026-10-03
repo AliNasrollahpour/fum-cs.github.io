@@ -481,9 +481,9 @@ function simulate(){
   var p=layout.pos[c.id],f=force[c.id];
   f.x+=tree[c.id].x;f.y+=tree[c.id].y;
   f.x+=(80-p.x)*0.002;
-  p.x+=f.x;p.y+=f.y;
+  p.x+=f.x*0.32;p.y+=f.y*0.12;
   p.y=80+(layout.depth[c.id]||0)*(140+forces.repulsion*45);
-  if(Math.abs(f.x)+Math.abs(f.y)>.18)moving=true;
+  if(Math.abs(f.x)+Math.abs(f.y)>.06)moving=true;
  });
  resolveCollisions(layout.pos,dragNode);
  courses.forEach(function(c){
