@@ -201,12 +201,38 @@ function wrapTitle(title,maxChars){
  if(line)lines.push(line);
  return lines.length?lines:[""];
 }
+function nodeMetrics(c){
+ var lines=wrapTitle(c.title,11),maxLine=0;
+ lines.forEach(function(line){maxLine=Math.max(maxLine,line.length)});
+ return {rx:Math.max(34,maxLine*3.15+12),ry:Math.max(26,10+lines.length*7)};
+}
+function resolveCollisions(pos,skipId){
+ for(var pass=0;pass<3;pass++)for(var i=0;i<courses.length;i++)for(var j=i+1;j<courses.length;j++){
+  var a=pos[courses[i].id],b=pos[courses[j].id];
+  if(!a||!b)continue;
+  var ma=nodeMetrics(courses[i]),mb=nodeMetrics(courses[j]);
+  var ra=Math.max(ma.rx,ma.ry)+4,rb=Math.max(mb.rx,mb.ry)+4,minDist=ra+rb;
+  var dx=a.x-b.x,dy=a.y-b.y,d=Math.sqrt(dx*dx+dy*dy);
+  if(d>=minDist)continue;
+  if(d<.001){dx=1;dy=0;d=1}
+  var push=(minDist-d)/d;
+  if(courses[i].id===skipId){
+   b.x-=dx*push;b.y-=dy*push;
+  }else if(courses[j].id===skipId){
+   a.x+=dx*push;a.y+=dy*push;
+  }else{
+   a.x+=dx*push*.5;a.y+=dy*push*.5;
+   b.x-=dx*push*.5;b.y-=dy*push*.5;
+  }
+ }
+}
 function treeBoidForce(pos,depth,maxDepth,ids,base){
  var force={};ids.forEach(function(id){force[id]={x:0,y:0}});
  var radius=240;
  ids.forEach(function(id){
   var p=pos[id],d=depth[id]||0,ratio=maxDepth?d/maxDepth:.5;
   force[id].y+=(2*ratio-1)*0.12*forces.tree;
+  if(d===0)force[id].y+=(anchorY-p.y)*0.012*forces.tree;
   var sx=0,sy=0,ay=0,count=0;
   ids.forEach(function(other){
    if(other===id)return;
@@ -261,9 +287,9 @@ function render(){
   if(!visible||!match||(selected&&c.id!==selected&&!rels.some(function(e){return(e.s===selected&&e.t===c.id)||(e.t===selected&&e.s===c.id)})))n.classList.add("dim");
   if(selected===c.id)n.classList.add("selected");if(query&&match)n.classList.add("match");
   var r=document.createElementNS("http://www.w3.org/2000/svg","ellipse");
-  var lines=wrapTitle(c.title,11),maxLine=0;
-  lines.forEach(function(line){maxLine=Math.max(maxLine,line.length)});
-  r.setAttribute("rx",Math.max(34,maxLine*3.15+12));r.setAttribute("ry",Math.max(26,10+lines.length*7));r.setAttribute("fill",c.category==="base"?"#455a64":c.category==="mandatory"?"#8e2b2b":"#3949ab");n.appendChild(r);
+  var metrics=nodeMetrics(c);
+  var lines=wrapTitle(c.title,11);
+  r.setAttribute("rx",metrics.rx);r.setAttribute("ry",metrics.ry);r.setAttribute("fill",c.category==="base"?"#455a64":c.category==="mandatory"?"#8e2b2b":"#3949ab");n.appendChild(r);
   var t=document.createElementNS("http://www.w3.org/2000/svg","text");t.setAttribute("x",0);t.setAttribute("y",-((lines.length-1)*6));t.setAttribute("text-anchor","middle");t.setAttribute("class","node-title");t.setAttribute("fill","#fff");
   lines.forEach(function(line,i){var span=document.createElementNS("http://www.w3.org/2000/svg","tspan");span.setAttribute("x",0);span.setAttribute("dy",i===0?0:12);span.textContent=line;t.appendChild(span)});
   n.appendChild(t);
@@ -347,6 +373,7 @@ function simulate(){
   p.x+=f.x;p.y+=f.y;
   if(Math.abs(f.x)+Math.abs(f.y)>.18)moving=true;
  });
+ resolveCollisions(layout.pos,dragNode);
  if(moving||dragNode)render();
  if(moving||dragNode)simTimer=requestAnimationFrame(simulate);
 }
@@ -367,7 +394,7 @@ window.onpointermove=function(e){
  if(!drag)return;
  if(dragNode){
   var p=svgPoint(e),q=layout.pos[dragNode];
-  q.x=p.x;q.y=p.y;render();startSimulation();
+  q.x=p.x;q.y=p.y;resolveCollisions(layout.pos,dragNode);render();startSimulation();
  }else{
   tx+=e.clientX-last.x;ty+=e.clientY-last.y;last={x:e.clientX,y:e.clientY};transform();
  }
