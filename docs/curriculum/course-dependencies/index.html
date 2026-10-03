@@ -35,7 +35,7 @@ ul{padding-right:20px}.node circle{stroke:var(--bg);stroke-width:2}.node text{po
 <script>
 var courses=[],rels=[],unresolved=[],selected=null,filter="all",query="",layout=null;
 var svg=document.getElementById("graph"),view=document.getElementById("view");
-function norm(s){return(s||"").replace(/[\\u200c\\u200d]/g,"").replace(/[يى]/g,"ی").replace(/ك/g,"ک").replace(/[\\u064B-\\u065F]/g,"").replace(/\\s+/g," ").trim()}
+function norm(s){return(s||"").replace(/[\u200c\u200d]/g,"").replace(/[يى]/g,"ی").replace(/ك/g,"ک").replace(/[\u064B-\u065F]/g,"").replace(/\s+/g," ").trim()}
 function cat(b){return b.indexOf("دروس پایه")>=0?"base":b.indexOf("دروس الزامی")>=0?"mandatory":"elective"}
 function id(u){return decodeURIComponent(u.split("/").filter(Boolean).pop())}
 function esc(s){return String(s).replace(/[&<>"']/g,function(m){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[m]})}
@@ -46,22 +46,27 @@ async function load(){
  courses=ds.map(function(d){return{id:id(d.u),url:d.u,title:d.t,category:cat(d.b),prereqs:[],coreqs:[],conditions:[]}});
  var map={};courses.forEach(function(c){map[norm(c.title)]=c});
  await Promise.all(courses.map(async function(c){
-  var html=await fetch(c.url).then(function(r){return r.text()});
-  var doc=new DOMParser().parseFromString(html,"text/html");
-  var rows=[].slice.call(doc.querySelectorAll("tr"));
-  var pre=rows.find(function(x){return norm(x.cells&&x.cells[0]&&x.cells[0].textContent).indexOf("پیش‌نیاز")===0});
-  var co=rows.find(function(x){return norm(x.cells&&x.cells[0]&&x.cells[0].textContent).indexOf("هم‌نیاز")===0});
-  function parse(row,type){
-   if(!row)return;
-   var raw=norm(row.cells[1]&&row.cells[1].textContent);
-   if(!raw||raw==="ندارد")return;
-   raw.split(/[،,]/).map(function(x){return x.trim()}).filter(Boolean).forEach(function(x){
-    var t=map[norm(x)];
-    if(t){if(type==="pre")c.prereqs.push(t.id);else c.coreqs.push(t.id)}
-    else{c.conditions.push(x);unresolved.push({course:c,ref:x,type:type})}
-   });
-  }
-  parse(pre,"pre");parse(co,"coreq");
+  try{
+   var url=c.url.replace(/\/$/,"")+"/index.html";
+   var r=await fetch(url);
+   if(!r.ok)throw new Error("HTTP "+r.status);
+   var html=await r.text();
+   var doc=new DOMParser().parseFromString(html,"text/html");
+   var rows=[].slice.call(doc.querySelectorAll("tr"));
+   var pre=rows.find(function(x){return norm(x.cells&&x.cells[0]&&x.cells[0].textContent).indexOf("پیش‌نیاز")===0});
+   var co=rows.find(function(x){return norm(x.cells&&x.cells[0]&&x.cells[0].textContent).indexOf("هم‌نیاز")===0});
+   function parse(row,type){
+    if(!row)return;
+    var raw=norm(row.cells[1]&&row.cells[1].textContent);
+    if(!raw||raw==="ندارد")return;
+    raw.split(/[،,]/).map(function(x){return x.trim()}).filter(Boolean).forEach(function(x){
+     var t=map[norm(x)];
+     if(t){if(type==="pre")c.prereqs.push(t.id);else c.coreqs.push(t.id)}
+     else{c.conditions.push(x);unresolved.push({course:c,ref:x,type:type})}
+    });
+   }
+   parse(pre,"pre");parse(co,"coreq");
+  }catch(e){unresolved.push({course:c,ref:"صفحه درس قابل بارگذاری نیست: "+e.message,type:"load"})}
  }));
  rels=[];
  courses.forEach(function(c){c.prereqs.forEach(function(p){rels.push({s:p,t:c.id,type:"pre"})});c.coreqs.forEach(function(p){rels.push({s:p,t:c.id,type:"coreq"})})});
