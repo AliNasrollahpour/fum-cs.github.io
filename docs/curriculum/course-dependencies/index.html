@@ -59,7 +59,7 @@ async function load(){
   [].slice.call(doc.querySelectorAll('a[href^="/docs/curriculum/"]')).forEach(function(a){
    var href=a.getAttribute("href");
    if(!href||href.indexOf("/docs/curriculum/")!==0||href.indexOf("/docs/curriculum/course-dependencies")===0)return;
-   var key=href.replace(/\\/$/,"");
+   var key=href.replace(/\/$/,"");
    if(seen[key])return;
    seen[key]=1;
    var h=a.querySelector("h2");
@@ -74,7 +74,7 @@ async function load(){
  unresolved=[];
  await Promise.all(courses.map(async function(c){
   try{
-   var url=sitePath(c.url.replace(/\\/$/,"")+"/index.html");
+   var url=sitePath(c.url.replace(/\/$/,"")+"/index.html");
    var r=await fetch(url);
    if(!r.ok)throw new Error("HTTP "+r.status);
    var html=await r.text();
