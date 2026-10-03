@@ -45,6 +45,8 @@ async function load(){
  var seen={};ds=ds.filter(function(d){if(seen[d.u])return false;seen[d.u]=1;return true});
  courses=ds.map(function(d){return{id:id(d.u),url:d.u,title:d.t,category:cat(d.b),prereqs:[],coreqs:[],conditions:[]}});
  var map={};courses.forEach(function(c){map[norm(c.title)]=c});
+ buildLayout();render();
+ document.getElementById("details").textContent="دروس بارگذاری شدند؛ در حال خواندن پیش‌نیازها…";
  await Promise.all(courses.map(async function(c){
   try{
    var url=c.url.replace(/\/$/,"")+"/index.html";
@@ -68,6 +70,8 @@ async function load(){
    parse(pre,"pre");parse(co,"coreq");
   }catch(e){unresolved.push({course:c,ref:"صفحه درس قابل بارگذاری نیست: "+e.message,type:"load"})}
  }));
+ rels=[];
+ courses.forEach(function(c){c.prereqs.forEach(function(p){rels.push({s:p,t:c.id,type:"pre"})});c.coreqs.forEach(function(p){rels.push({s:p,t:c.id,type:"coreq"})})});
  rels=[];
  courses.forEach(function(c){c.prereqs.forEach(function(p){rels.push({s:p,t:c.id,type:"pre"})});c.coreqs.forEach(function(p){rels.push({s:p,t:c.id,type:"coreq"})})});
  buildLayout();render();audit();
