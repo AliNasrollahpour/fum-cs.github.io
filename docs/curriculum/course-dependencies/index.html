@@ -259,13 +259,13 @@ function minimizeCrossings(pos,depth,component,components){
 }
 var edgeLanes={};
 function edgePath(a,b,key){
- var dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)||1,r=10;
+ var dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)||1,r=32;
  var ux=dx/d,uy=dy/d,sx=a.x+ux*r,sy=a.y+uy*r,tx=b.x-ux*r,ty=b.y-uy*r;
- var midY=(sy+ty)/2;
  var lane=edgeLanes[key]||0;
- var laneOffset=lane*22;
- var channelY=midY+laneOffset;
- return "M "+sx+" "+sy+" L "+sx+" "+channelY+" L "+tx+" "+channelY+" L "+tx+" "+ty;
+ var bend=Math.max(45,Math.min(150,d*.28));
+ var cx1=sx+dx*.28,cy1=sy+dy*.28+lane*18;
+ var cx2=tx-dx*.28,cy2=ty-dy*.28+lane*18;
+ return "M "+sx+" "+sy+" C "+cx1+" "+cy1+" "+cx2+" "+cy2+" "+tx+" "+ty;
 }
 function wrapTitle(title,maxChars){
  var words=String(title||"").split(/\s+/).filter(Boolean),lines=[],line="";
@@ -430,12 +430,14 @@ forceControl("repulsion","repulsion");forceControl("spring","spring");forceContr
 document.getElementById("search").oninput=function(e){query=e.target.value;render()};
 document.getElementById("category").onchange=function(e){filter=e.target.value;render()};
 document.getElementById("reset").onclick=function(){query="";filter="all";selected=null;fitGraph();document.getElementById("search").value="";document.getElementById("category").value="all";document.getElementById("details").textContent="یک گره را انتخاب کنید. دوبار کلیک صفحه درس را باز می‌کند.";render()};
-var scale=1,tx=0,ty=0,drag=false,last,dragNode=null,simTimer=null,simulationActive=false;
+var scale=1,tx=0,ty=0,drag=false,last,dragNode=null,simTimer=null,simulationActive=false,dragMoved=false;
 function transform(){view.setAttribute("transform","translate("+tx+" "+ty+") scale("+scale+")")}
 function svgPoint(e){
  var p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;
- var m=svg.getScreenCTM();if(m)return p.matrixTransform(m.inverse());
- return {x:e.clientX,y:e.clientY};
+ var m=svg.getScreenCTM();
+ if(!m)return {x:e.clientX,y:e.clientY};
+ var q=p.matrixTransform(m.inverse());
+ return {x:(q.x-tx)/scale,y:(q.y-ty)/scale};
 }
 function startSimulation(){
  simulationActive=true;
@@ -484,8 +486,10 @@ function simulate(){
   if(Math.abs(f.x)+Math.abs(f.y)>.18)moving=true;
  });
  resolveCollisions(layout.pos,dragNode);
- courses.forEach(function(c){layout.pos[c.id].y=80+(layout.depth[c.id]||0)*(140+forces.repulsion*45)});
- minimizeCrossings(layout.pos,layout.depth,layout.component,layout.components);
+ courses.forEach(function(c){
+  if(c.id!==dragNode)layout.pos[c.id].y=80+(layout.depth[c.id]||0)*(140+forces.repulsion*45);
+ });
+ if(!dragNode)minimizeCrossings(layout.pos,layout.depth,layout.component,layout.components);
  render();
  if(simulationActive||moving||dragNode)simTimer=requestAnimationFrame(simulate);
 }
@@ -500,8 +504,7 @@ function nodePointerDown(c,e){
  e.stopPropagation();
  selected=c.id;
  details(c);
- render();
- dragNode=c.id;drag=true;
+ dragNode=c.id;drag=true;dragMoved=false;
  last=svgPoint(e);
  svg.classList.add("dragging");
  if(svg.setPointerCapture)svg.setPointerCapture(e.pointerId);
@@ -513,7 +516,7 @@ window.onpointermove=function(e){
  if(!drag)return;
  if(dragNode){
   var p=svgPoint(e),q=layout.pos[dragNode];
-  q.x=p.x;q.y=p.y;resolveCollisions(layout.pos,dragNode);render();startSimulation();
+  q.x=p.x;q.y=p.y;dragMoved=true;render();startSimulation();
  }else{
   tx+=e.clientX-last.x;ty+=e.clientY-last.y;last={x:e.clientX,y:e.clientY};transform();
  }
