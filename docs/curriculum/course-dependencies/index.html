@@ -224,10 +224,22 @@ function treeBoidForce(pos,depth,maxDepth,ids,base){
    force[id].y+=(sy/count-p.y)*0.0015*forces.tree+ay/count*forces.tree;
   }
  });
- var meanX=0,meanY=0;
- ids.forEach(function(id){meanX+=force[id].x;meanY+=force[id].y});
- meanX/=ids.length;meanY/=ids.length;
- ids.forEach(function(id){force[id].x-=meanX;force[id].y-=meanY});
+ var totalX=0,totalY=0,totalMagnitude=0;
+ ids.forEach(function(id){
+  totalX+=force[id].x;
+  totalY+=force[id].y;
+  totalMagnitude+=Math.sqrt(force[id].x*force[id].x+force[id].y*force[id].y);
+ });
+ var drift=Math.sqrt(totalX*totalX+totalY*totalY);
+ if(drift>0&&totalMagnitude>0){
+  var correction=Math.min(1,drift/totalMagnitude);
+  var correctionX=totalX/ids.length*correction;
+  var correctionY=totalY/ids.length*correction;
+  ids.forEach(function(id){
+   force[id].x-=correctionX;
+   force[id].y-=correctionY;
+  });
+ }
  return force;
 }
 function render(){
