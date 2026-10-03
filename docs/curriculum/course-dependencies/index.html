@@ -117,7 +117,7 @@ function buildLayout(){
  var n=courses.length,pos={},vel={},depth={},adj={};
  if(!n){layout={pos:{},w:800,h:600};return}
  courses.forEach(function(c){adj[c.id]=[]});
- rels.filter(function(e){return e.type==="pre"}).forEach(function(e){adj[e.s].push(e.t)});
+ rels.filter(function(e){return e.type==="pre"}).forEach(function(e){adj[e.t].push(e.s)});
  function depthOf(id,seen){
   if(depth[id]!=null)return depth[id];
   if(seen[id])return 0;
