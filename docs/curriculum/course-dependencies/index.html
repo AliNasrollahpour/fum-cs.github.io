@@ -251,6 +251,9 @@ function simulate(){
 }
 function nodePointerDown(c,e){
  e.stopPropagation();
+ selected=c.id;
+ details(c);
+ render();
  dragNode=c.id;drag=true;
  last=svgPoint(e);
  svg.classList.add("dragging");
