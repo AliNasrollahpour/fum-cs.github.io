@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>نمودار پیش‌نیاز دروس | علوم کامپیوتر فردوسی مشهد</title>
 <style>:root{--bg:#fafafa;--panel:#f5f5f5;--text:#303030;--muted:#777;--border:#ddd;--accent:#e05252;--grid:#e5e5e5;--edge:#999;--node:#555}
+[data-theme="dark"]{--bg:#202020;--panel:#262626;--text:#dcddde;--muted:#999;--border:#3b3b3b;--accent:#e05252;--grid:#2b2b2b;--edge:#777;--node:#444}}
 @media(prefers-color-scheme:dark){:root{--bg:#202020;--panel:#262626;--text:#dcddde;--muted:#999;--border:#3b3b3b;--accent:#e05252;--grid:#2b2b2b;--edge:#777;--node:#444}}
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--text)}
 header{padding:16px 20px 11px;border-bottom:1px solid var(--border);background:var(--bg);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
@@ -40,7 +41,7 @@ function id(u){return decodeURIComponent(u.split("/").filter(Boolean).pop())}
 function esc(s){return String(s).replace(/[&<>"']/g,function(m){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[m]})}
 async function load(){
  var idx=await fetch("/search-index.json").then(function(r){return r.json()});
- var ds=idx[0].documents.filter(function(d){return d.u&&d.u.indexOf("/docs/curriculum/")===0&&d.b&&d.b.indexOf("برنامه درسی")>=0});
+ var ds=idx.documents.filter(function(d){return d.u&&d.u.indexOf("/docs/curriculum/")===0&&d.b&&d.b.indexOf("برنامه درسی")>=0});
  var seen={};ds=ds.filter(function(d){if(seen[d.u])return false;seen[d.u]=1;return true});
  courses=ds.map(function(d){return{id:id(d.u),url:d.u,title:d.t,category:cat(d.b),prereqs:[],coreqs:[],conditions:[]}});
  var map={};courses.forEach(function(c){map[norm(c.title)]=c});
@@ -104,9 +105,9 @@ function render(){
   var visible=filter==="all"||filter===c.category,match=!query||norm(c.title).indexOf(norm(query))>=0;
   if(!visible||!match||(selected&&c.id!==selected&&!rels.some(function(e){return(e.s===selected&&e.t===c.id)||(e.t===selected&&e.s===c.id)})))n.classList.add("dim");
   if(selected===c.id)n.classList.add("selected");if(query&&match)n.classList.add("match");
-  var r=document.createElementNS("http://www.w3.org/2000/svg","rect");r.setAttribute("width",230);r.setAttribute("height",72);r.setAttribute("fill",c.category==="base"?"#455a64":c.category==="mandatory"?"#8e2b2b":"#3949ab");n.appendChild(r);
-  var t=document.createElementNS("http://www.w3.org/2000/svg","text");t.setAttribute("x",115);t.setAttribute("y",29);t.setAttribute("text-anchor","middle");t.setAttribute("fill","#fff");t.setAttribute("class","title");t.textContent=c.title;n.appendChild(t);
-  var ct=document.createElementNS("http://www.w3.org/2000/svg","text");ct.setAttribute("x",115);ct.setAttribute("y",49);ct.setAttribute("text-anchor","middle");ct.setAttribute("fill","#fff");ct.setAttribute("class","cat");ct.textContent=c.category==="base"?"پایه":c.category==="mandatory"?"الزامی":"اختیاری";n.appendChild(ct);
+  var r=document.createElementNS("http://www.w3.org/2000/svg","circle");r.setAttribute("r",9);r.setAttribute("fill",c.category==="base"?"#455a64":c.category==="mandatory"?"#8e2b2b":"#3949ab");n.appendChild(r);
+  var t=document.createElementNS("http://www.w3.org/2000/svg","text");t.setAttribute("x",16);t.setAttribute("y",4);t.setAttribute("text-anchor","middle");t.setAttribute("fill","#fff");t.setAttribute("class","title");t.textContent=c.title;n.appendChild(t);
+  var ct=document.createElementNS("http://www.w3.org/2000/svg","text");ct.setAttribute("x",16);ct.setAttribute("y",20);ct.setAttribute("text-anchor","middle");ct.setAttribute("fill","#fff");ct.setAttribute("class","cat");ct.textContent=c.category==="base"?"پایه":c.category==="mandatory"?"الزامی":"اختیاری";n.appendChild(ct);
   n.onclick=function(){selected=c.id;details(c);render()};n.ondblclick=function(){location.href=c.url};view.appendChild(n)
  });
  document.getElementById("count").textContent=courses.length;document.getElementById("edges").textContent=rels.length;document.getElementById("unresolved").textContent=unresolved.length;document.getElementById("cycles").textContent=cycles();
