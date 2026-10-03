@@ -16,7 +16,7 @@ svg{width:100%;height:100%;touch-action:none;cursor:grab}svg.dragging{cursor:gra
 .side{border-left:1px solid var(--border);background:var(--panel);padding:13px;overflow:auto}.stats{display:grid;grid-template-columns:1fr 1fr;gap:6px}.stat{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px}.stat b{display:block;font-size:17px}.stat span{font-size:11px;color:var(--muted)}
 .legend{margin:13px 0;display:grid;gap:7px;font-size:12px}.legend span{display:inline-block;width:10px;height:10px;border-radius:50%;margin-left:6px;vertical-align:-1px}
 #details{border-top:1px solid var(--border);padding-top:11px;line-height:1.7}.notice{background:color-mix(in srgb,#e0a000 12%,var(--panel));border:1px solid #8b6f2b;border-radius:6px;padding:8px;margin:9px 0;font-size:12px}
-ul{padding-right:20px}.node ellipse{stroke:var(--bg);stroke-width:2}.node text{pointer-events:none;fill:var(--text)}.title{font-size:11px;font-weight:600}.node-title{font-size:11px;font-weight:600}.cat{font-size:9px;fill:var(--muted)!important}.edge{fill:none;stroke:var(--edge);stroke-width:2.8;opacity:.85}.edge.coreq{stroke-dasharray:5 5}.dim{opacity:.08}.selected ellipse{stroke:var(--accent);stroke-width:3}.match ellipse{stroke:var(--text);stroke-width:3}
+ul{padding-right:20px}.node ellipse{stroke:var(--bg);stroke-width:2}.node text{pointer-events:none;fill:var(--text)}.title{font-size:11px;font-weight:600}.node-title{font-size:11px;font-weight:600}.cat{font-size:9px;fill:var(--muted)!important}.edge{fill:none;stroke:var(--edge);stroke-width:3.5;opacity:1;vector-effect:non-scaling-stroke}.edge.coreq{stroke-dasharray:7 6}.edge-arrow{fill:var(--edge)}.edge.coreq{stroke-dasharray:5 5}.dim{opacity:.08}.selected ellipse{stroke:var(--accent);stroke-width:3}.match ellipse{stroke:var(--text);stroke-width:3}
 @media(max-width:850px){.layout{grid-template-columns:1fr;height:auto}.side{border:0;border-top:1px solid var(--border);max-height:400px}.layout main{height:70vh;min-height:500px}}</style>
 </head>
 <body>
@@ -25,7 +25,7 @@ ul{padding-right:20px}.node ellipse{stroke:var(--bg);stroke-width:2}.node text{p
 <div class="controls"><input id="search" placeholder="جستجوی درس…"><select id="category"><option value="all">همه دروس</option><option value="base">پایه</option><option value="mandatory">الزامی</option><option value="elective">اختیاری</option></select><label class="force">دفع گره‌ها <input id="repulsion" type="range" min="0" max="10" step="0.1" value="1"><span id="repulsionValue">1.0</span></label><label class="force">کشش یال‌ها <input id="spring" type="range" min="0" max="10" step="0.1" value="1"><span id="springValue">1.0</span></label><label class="force">چیدمان درختی <input id="tree" type="range" min="0" max="10" step="0.1" value="1"><span id="treeValue">1.0</span></label><button id="reset">نمایش همه</button></div>
 </header>
 <div class="layout">
-<main><svg id="graph"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8z" fill="#777"/></marker></defs><g id="view"></g></svg></main>
+<main><svg id="graph"><defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path class="edge-arrow" d="M0 0L9 4.5L0 9z"/></marker></defs><g id="view"></g></svg></main>
 <aside class="side">
 <div class="stats"><div class="stat"><b id="count">—</b><span>درس</span></div><div class="stat"><b id="edges">—</b><span>رابطه</span></div><div class="stat"><b id="unresolved">—</b><span>ارجاع حل‌نشده</span></div><div class="stat"><b id="cycles">—</b><span>چرخه</span></div></div>
 <div class="legend"><div><span style="background:#455a64"></span>دروس پایه</div><div><span style="background:#8e2b2b"></span>دروس الزامی</div><div><span style="background:#3949ab"></span>دروس اختیاری</div><div>خط پیوسته: پیش‌نیاز</div><div>خط‌چین: هم‌نیاز</div></div>
@@ -263,7 +263,7 @@ function edgePath(a,b,key){
  var ux=dx/d,uy=dy/d,sx=a.x+ux*r,sy=a.y+uy*r,tx=b.x-ux*r,ty=b.y-uy*r;
  var midY=(sy+ty)/2;
  var lane=edgeLanes[key]||0;
- var laneOffset=lane*16;
+ var laneOffset=lane*22;
  var channelY=midY+laneOffset;
  return "M "+sx+" "+sy+" L "+sx+" "+channelY+" L "+tx+" "+channelY+" L "+tx+" "+ty;
 }
@@ -364,6 +364,15 @@ function treeBoidForce(pos,depth,maxDepth,ids,base,component,components){
   });
  }
  return force;
+}
+function fitGraph(){
+ if(!layout||!courses.length)return;
+ var w=svg.clientWidth||800,h=svg.clientHeight||600,pad=50;
+ var sx=(w-pad*2)/layout.w,sy=(h-pad*2)/layout.h;
+ scale=Math.max(.25,Math.min(1.2,Math.min(sx,sy)));
+ tx=(w-layout.w*scale)/2;
+ ty=(h-layout.h*scale)/2;
+ transform();
 }
 function render(){
  view.innerHTML="";
