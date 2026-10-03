@@ -79,8 +79,8 @@ async function load(){
    var html=await r.text();
    var doc=new DOMParser().parseFromString(html,"text/html");
    var rows=[].slice.call(doc.querySelectorAll("tr"));
-   var pre=rows.find(function(x){return norm(x.cells&&x.cells[0]&&x.cells[0].textContent).indexOf("پیش‌نیاز")===0});
-   var co=rows.find(function(x){return norm(x.cells&&x.cells[0]&&x.cells[0].textContent).indexOf("هم‌نیاز")===0});
+   var pre=rows.find(function(x){return norm(x.cells&&x.cells[0]&&x.cells[0].textContent).indexOf("پیشنیاز")===0});
+   var co=rows.find(function(x){return norm(x.cells&&x.cells[0]&&x.cells[0].textContent).indexOf("همنیاز")===0});
    function parse(row,type){
     if(!row)return;
     var cell=row.cells&&row.cells[1];
