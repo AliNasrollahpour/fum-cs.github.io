@@ -176,6 +176,7 @@ function buildLayout(){
    vel[c.id].y=Math.max(-10,Math.min(10,vel[c.id].y));
    p.x+=vel[c.id].x;p.y+=vel[c.id].y;
   });
+  resolveCollisions(pos,null);
  }
  var minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
  courses.forEach(function(c){var p=pos[c.id];minX=Math.min(minX,p.x);minY=Math.min(minY,p.y);maxX=Math.max(maxX,p.x);maxY=Math.max(maxY,p.y)});
