@@ -62,13 +62,12 @@ async function load(){
    var key=href.replace(/\/$/,"");
    if(seen[key])return;
    seen[key]=1;
-   var h=a.querySelector("h2");
-   var title=h?(h.getAttribute("title")||h.textContent).trim():href.split("/").pop();
+   var title=(a.getAttribute("title")||a.textContent||href.split("/").pop()).trim();
    courses.push({id:id(href),url:href,title:title,category:page.group.category,prereqs:[],coreqs:[],conditions:[]});
   });
  });
  if(!courses.length)throw new Error("No courses found in curriculum category pages");
- var map={};courses.forEach(function(c){map[norm(c.title)]=c});
+ var map={};courses.forEach(function(c){map[norm(c.title)]=c;map[c.url.replace(/\/$/,"")]=c});
  buildLayout();render();
  document.getElementById("details").textContent="دروس بارگذاری شدند؛ در حال خواندن پیش‌نیازها…";
  unresolved=[];
@@ -84,8 +83,20 @@ async function load(){
    var co=rows.find(function(x){return norm(x.cells&&x.cells[0]&&x.cells[0].textContent).indexOf("هم‌نیاز")===0});
    function parse(row,type){
     if(!row)return;
-    var raw=norm(row.cells[1]&&row.cells[1].textContent);
+    var cell=row.cells&&row.cells[1];
+    if(!cell)return;
+    var raw=norm(cell.textContent);
     if(!raw||raw==="ندارد")return;
+    var links=[].slice.call(cell.querySelectorAll("a[href^=\"/docs/curriculum/\"]"));
+    if(links.length){
+     links.forEach(function(a){
+      var href=a.getAttribute("href").replace(/\/$/,"");
+      var t=map[href]||map[norm(a.textContent)];
+      if(t){if(type==="pre")c.prereqs.push(t.id);else c.coreqs.push(t.id)}
+      else{c.conditions.push(a.textContent.trim());unresolved.push({course:c,ref:a.textContent.trim(),type:type})}
+     });
+     return;
+    }
     raw.split(/[،,]/).map(function(x){return x.trim()}).filter(Boolean).forEach(function(x){
      var t=map[norm(x)];
      if(t){if(type==="pre")c.prereqs.push(t.id);else c.coreqs.push(t.id)}
@@ -144,10 +155,10 @@ function buildLayout(){
  layout={pos:pos,w:Math.max(800,maxX-minX+160),h:Math.max(600,maxY-minY+160)};
 }
 function edgePath(a,b){
- var sx=a.x+230,sy=a.y+36,tx=b.x,ty=b.y+36;
- if(tx<=sx){return "M "+sx+" "+sy+" C "+(sx+70)+" "+sy+" "+(tx-70)+" "+ty+" "+tx+" "+ty}
- var dx=Math.max(45,(tx-sx)/2);
- return "M "+sx+" "+sy+" C "+(sx+dx)+" "+sy+" "+(tx-dx)+" "+ty+" "+tx+" "+ty;
+ var dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)||1,r=10;
+ var ux=dx/d,uy=dy/d,sx=a.x+ux*r,sy=a.y+uy*r,tx=b.x-ux*r,ty=b.y-uy*r;
+ var bend=Math.min(90,d*.22),nx=-uy*bend,ny=ux*bend;
+ return "M "+sx+" "+sy+" C "+(sx+dx*.35+nx)+" "+(sy+dy*.35+ny)+" "+(tx-dx*.35+nx)+" "+(ty-dy*.35+ny)+" "+tx+" "+ty;
 }
 function render(){
  view.innerHTML="";
