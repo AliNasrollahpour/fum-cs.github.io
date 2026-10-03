@@ -230,7 +230,7 @@ function resolveCollisions(pos,skipId){
 function treeBoidForce(pos,depth,maxDepth,ids,base){
  var force={};ids.forEach(function(id){force[id]={x:0,y:0}});
  var radius=240;
- var depthGap=70+forces.repulsion*30;
+ var depthGap=140+forces.repulsion*45;
  var anchorY=80;
 
  ids.forEach(function(id){
@@ -239,7 +239,7 @@ function treeBoidForce(pos,depth,maxDepth,ids,base){
 
   // Each depth has its own horizontal target line.
   // Repulsion controls the distance between those lines.
-  force[id].y+=(targetY-p.y)*0.015*forces.tree;
+  force[id].y+=(targetY-p.y)*0.08*forces.tree;
 
   var sx=0,sy=0,ay=0,count=0;
   ids.forEach(function(other){
@@ -257,7 +257,7 @@ function treeBoidForce(pos,depth,maxDepth,ids,base){
 
   if(count){
    force[id].x+=(sx/count-p.x)*0.0015*forces.tree;
-   force[id].y+=(sy/count-p.y)*0.0015*forces.tree+ay/count*depthGap*forces.tree;
+   force[id].y+=(sy/count-p.y)*0.0003*forces.tree+ay/count*depthGap*0.15*forces.tree;
   }
  });
 
