@@ -77,18 +77,45 @@ async function load(){
  buildLayout();render();audit();
 }
 function buildLayout(){
- var n=courses.length, pos={},vel={},fixed=false;
- courses.forEach(function(c,i){var a=i/n*Math.PI*2;pos[c.id]={x:Math.cos(a)*500,y:Math.sin(a)*500};vel[c.id]={x:0,y:0}});
- for(var iter=0;iter<180;iter++){
-  var force={};courses.forEach(function(c){force[c.id]={x:0,y:0}});
-  for(var i=0;i<n;i++)for(var j=i+1;j<n;j++){var a=pos[courses[i].id],b=pos[courses[j].id],dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy+1,d=Math.sqrt(d2),f=15000/d2;force[courses[i].id].x+=dx/d*f;force[courses[i].id].y+=dy/d*f;force[courses[j].id].x-=dx/d*f;force[courses[j].id].y-=dy/d*f}
-  rels.forEach(function(e){var a=pos[e.s],b=pos[e.t],dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)+1,f=(d-220)*0.012;force[e.s].x+=dx/d*f;force[e.s].y+=dy/d*f;force[e.t].x-=dx/d*f;force[e.t].y-=dy/d*f});
-  courses.forEach(function(c){var p=pos[c.id],f=force[c.id];vel[c.id].x=(vel[c.id].x+f.x)*.82;vel[c.id].y=(vel[c.id].y+f.y)*.82;p.x+=vel[c.id].x;p.y+=vel[c.id].y});
+ var n=courses.length,pos={},vel={};
+ if(!n){layout={pos:{},w:800,h:600};return}
+ var radius=Math.max(260,Math.sqrt(n)*55);
+ courses.forEach(function(c,i){
+  var a=i/n*Math.PI*2;
+  pos[c.id]={x:400+Math.cos(a)*radius,y:300+Math.sin(a)*radius};
+  vel[c.id]={x:0,y:0};
+ });
+ for(var iter=0;iter<220;iter++){
+  var force={};
+  courses.forEach(function(c){force[c.id]={x:0,y:0}});
+  for(var i=0;i<n;i++)for(var j=i+1;j<n;j++){
+   var a=pos[courses[i].id],b=pos[courses[j].id];
+   var dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy+400,d=Math.sqrt(d2);
+   var f=Math.min(3,9000/d2);
+   force[courses[i].id].x+=dx/d*f;force[courses[i].id].y+=dy/d*f;
+   force[courses[j].id].x-=dx/d*f;force[courses[j].id].y-=dy/d*f;
+  }
+  rels.forEach(function(e){
+   var a=pos[e.s],b=pos[e.t];if(!a||!b)return;
+   var dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)+1;
+   var f=Math.max(-2,Math.min(2,(d-150)*0.008));
+   force[e.s].x+=dx/d*f;force[e.s].y+=dy/d*f;
+   force[e.t].x-=dx/d*f;force[e.t].y-=dy/d*f;
+  });
+  courses.forEach(function(c){
+   var p=pos[c.id],f=force[c.id];
+   f.x+=(400-p.x)*0.002;f.y+=(300-p.y)*0.002;
+   vel[c.id].x=(vel[c.id].x+f.x)*0.86;
+   vel[c.id].y=(vel[c.id].y+f.y)*0.86;
+   vel[c.id].x=Math.max(-8,Math.min(8,vel[c.id].x));
+   vel[c.id].y=Math.max(-8,Math.min(8,vel[c.id].y));
+   p.x+=vel[c.id].x;p.y+=vel[c.id].y;
+  });
  }
  var minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
  courses.forEach(function(c){var p=pos[c.id];minX=Math.min(minX,p.x);minY=Math.min(minY,p.y);maxX=Math.max(maxX,p.x);maxY=Math.max(maxY,p.y)});
  courses.forEach(function(c){pos[c.id]={x:pos[c.id].x-minX+80,y:pos[c.id].y-minY+80}});
- layout={pos:pos,w:maxX-minX+390,h:maxY-minY+220};
+ layout={pos:pos,w:Math.max(800,maxX-minX+160),h:Math.max(600,maxY-minY+160)};
 }
 function edgePath(a,b){
  var sx=a.x+230,sy=a.y+36,tx=b.x,ty=b.y+36;
@@ -115,8 +142,8 @@ function render(){
   if(!visible||!match||(selected&&c.id!==selected&&!rels.some(function(e){return(e.s===selected&&e.t===c.id)||(e.t===selected&&e.s===c.id)})))n.classList.add("dim");
   if(selected===c.id)n.classList.add("selected");if(query&&match)n.classList.add("match");
   var r=document.createElementNS("http://www.w3.org/2000/svg","circle");r.setAttribute("r",9);r.setAttribute("fill",c.category==="base"?"#455a64":c.category==="mandatory"?"#8e2b2b":"#3949ab");n.appendChild(r);
-  var t=document.createElementNS("http://www.w3.org/2000/svg","text");t.setAttribute("x",16);t.setAttribute("y",4);t.setAttribute("text-anchor","middle");t.setAttribute("fill","#fff");t.setAttribute("class","title");t.textContent=c.title;n.appendChild(t);
-  var ct=document.createElementNS("http://www.w3.org/2000/svg","text");ct.setAttribute("x",16);ct.setAttribute("y",20);ct.setAttribute("text-anchor","middle");ct.setAttribute("fill","#fff");ct.setAttribute("class","cat");ct.textContent=c.category==="base"?"پایه":c.category==="mandatory"?"الزامی":"اختیاری";n.appendChild(ct);
+  var t=document.createElementNS("http://www.w3.org/2000/svg","text");t.setAttribute("x",16);t.setAttribute("y",4);t.setAttribute("text-anchor","start");t.setAttribute("fill","var(--text");t.setAttribute("class","title");t.textContent=c.title;n.appendChild(t);
+  var ct=document.createElementNS("http://www.w3.org/2000/svg","text");ct.setAttribute("x",16);ct.setAttribute("y",20);ct.setAttribute("text-anchor","start");ct.setAttribute("fill","var(--muted");ct.setAttribute("class","cat");ct.textContent=c.category==="base"?"پایه":c.category==="mandatory"?"الزامی":"اختیاری";n.appendChild(ct);
   n.onclick=function(){selected=c.id;details(c);render()};n.ondblclick=function(){location.href=c.url};view.appendChild(n)
  });
  document.getElementById("count").textContent=courses.length;document.getElementById("edges").textContent=rels.length;document.getElementById("unresolved").textContent=unresolved.length;document.getElementById("cycles").textContent=cycles();
