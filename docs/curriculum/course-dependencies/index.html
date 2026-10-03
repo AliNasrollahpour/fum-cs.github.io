@@ -168,7 +168,7 @@ function buildLayout(){
   courses.forEach(function(c){
    var p=pos[c.id],f=force[c.id];
    var depthRatio=maxDepth?(depth[c.id]||0)/maxDepth:.5;
-   f.y+=(1-2*depthRatio)*0.035*forces.tree;
+   f.y+=(1-2*depthRatio)*0.12*forces.tree;
    f.x+=(80-p.x)*0.002;
    vel[c.id].x=(vel[c.id].x+f.x)*0.82;
    vel[c.id].y=(vel[c.id].y+f.y)*0.82;
@@ -283,7 +283,7 @@ function simulate(){
   if(c.id===dragNode)return;
   var p=layout.pos[c.id],f=force[c.id];
   var depthRatio=layout.maxDepth?(layout.depth[c.id]||0)/layout.maxDepth:.5;
-  f.y+=(1-2*depthRatio)*0.035*forces.tree;
+  f.y+=(1-2*depthRatio)*0.12*forces.tree;
   f.x+=(80-p.x)*0.002;
   p.x+=f.x;p.y+=f.y;
   if(Math.abs(f.x)+Math.abs(f.y)>.18)moving=true;
@@ -303,7 +303,7 @@ function nodePointerDown(c,e){
  startSimulation();
 }
 svg.onwheel=function(e){e.preventDefault();scale=Math.max(.45,Math.min(2.2,scale*(e.deltaY<0?1.08:.925)));transform()};
-svg.onpointerdown=function(e){if(e.target.closest(".node"))return;drag=true;dragNode=null;last={x:e.clientX,y:e.clientY};svg.classList.add("dragging")};
+svg.onpointerdown=function(e){if(e.target.closest(".node"))return;selected=null;document.getElementById("details").textContent="یک گره را انتخاب کنید. دوبار کلیک صفحه درس را باز می‌کند.";render();drag=true;dragNode=null;last={x:e.clientX,y:e.clientY};svg.classList.add("dragging")};
 window.onpointermove=function(e){
  if(!drag)return;
  if(dragNode){
