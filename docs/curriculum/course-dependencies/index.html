@@ -165,10 +165,16 @@ function buildLayout(){
    force[e.s].x+=dx/d*f;force[e.s].y+=dy/d*f;
    force[e.t].x-=dx/d*f;force[e.t].y-=dy/d*f;
   });
+  var treeMean=0;
+  courses.forEach(function(c){
+   var depthRatio=maxDepth?(depth[c.id]||0)/maxDepth:.5;
+   treeMean+=1-2*depthRatio;
+  });
+  treeMean/=n;
   courses.forEach(function(c){
    var p=pos[c.id],f=force[c.id];
    var depthRatio=maxDepth?(depth[c.id]||0)/maxDepth:.5;
-   f.y+=(1-2*depthRatio)*0.12*forces.tree;
+   f.y+=((1-2*depthRatio)-treeMean)*0.12*forces.tree;
    f.x+=(80-p.x)*0.002;
    vel[c.id].x=(vel[c.id].x+f.x)*0.82;
    vel[c.id].y=(vel[c.id].y+f.y)*0.82;
@@ -278,12 +284,18 @@ function simulate(){
   force[e.s].x+=dx/d*f;force[e.s].y+=dy/d*f;
   force[e.t].x-=dx/d*f;force[e.t].y-=dy/d*f;
  });
+ var treeMean=0;
+ courses.forEach(function(c){
+  var depthRatio=layout.maxDepth?(layout.depth[c.id]||0)/layout.maxDepth:.5;
+  treeMean+=1-2*depthRatio;
+ });
+ treeMean/=courses.length;
  var moving=false;
  courses.forEach(function(c){
   if(c.id===dragNode)return;
   var p=layout.pos[c.id],f=force[c.id];
   var depthRatio=layout.maxDepth?(layout.depth[c.id]||0)/layout.maxDepth:.5;
-  f.y+=(1-2*depthRatio)*0.12*forces.tree;
+  f.y+=((1-2*depthRatio)-treeMean)*0.12*forces.tree;
   f.x+=(80-p.x)*0.002;
   p.x+=f.x;p.y+=f.y;
   if(Math.abs(f.x)+Math.abs(f.y)>.18)moving=true;
