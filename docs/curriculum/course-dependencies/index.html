@@ -4,20 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>نمودار پیش‌نیاز دروس | علوم کامپیوتر فردوسی مشهد</title>
-<style>
-:root{--bg:#fff;--panel:#f7f7f8;--text:#171717;--muted:#666;--border:#ddd;--accent:#c62828}
+<style>:root{--bg:#fafafa;--panel:#f5f5f5;--text:#303030;--muted:#777;--border:#ddd;--accent:#e05252;--grid:#e5e5e5;--edge:#999;--node:#555}
+@media(prefers-color-scheme:dark){:root{--bg:#202020;--panel:#262626;--text:#dcddde;--muted:#999;--border:#3b3b3b;--accent:#e05252;--grid:#2b2b2b;--edge:#777;--node:#444}}
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--text)}
-header{padding:18px 22px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
-h1{font-size:23px;margin:0 0 5px}.sub,.small{color:var(--muted);font-size:13px}
-.controls{display:flex;gap:8px;flex-wrap:wrap}.controls input,.controls select,.controls button{font:inherit;border:1px solid var(--border);background:#fff;border-radius:7px;padding:8px 10px}.controls input{width:220px}
-.layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;height:calc(100vh - 92px);min-height:600px}
-main{overflow:hidden;background:#fafafa}svg{width:100%;height:100%;touch-action:none;cursor:grab}svg.dragging{cursor:grabbing}
-.side{border-left:1px solid var(--border);background:var(--panel);padding:14px;overflow:auto}.stats{display:grid;grid-template-columns:1fr 1fr;gap:7px}.stat{background:#fff;border:1px solid var(--border);border-radius:7px;padding:9px}.stat b{display:block;font-size:17px}.stat span{font-size:11px;color:var(--muted)}
-.legend{margin:14px 0;display:grid;gap:7px;font-size:12px}.legend span{display:inline-block;width:12px;height:12px;border-radius:3px;margin-left:6px;vertical-align:-2px}
-#details{border-top:1px solid var(--border);padding-top:12px;line-height:1.7}.notice{background:#fff8e1;border:1px solid #ead7a0;border-radius:7px;padding:8px;margin:10px 0;font-size:12px}
-ul{padding-right:20px}.node rect{stroke:#fff;stroke-width:2;rx:9}.node text{pointer-events:none}.title{font-size:12px;font-weight:700}.cat{font-size:10px}.edge{fill:none;stroke:#777;stroke-width:1.5}.edge.coreq{stroke-dasharray:6 5}.dim{opacity:.12}.selected rect{stroke:#c62828;stroke-width:3}.match rect{stroke:#111;stroke-width:3}
-@media(max-width:850px){.layout{grid-template-columns:1fr;height:auto}.side{border:0;border-top:1px solid var(--border);max-height:400px}.layout main{height:70vh;min-height:500px}}
-</style>
+header{padding:16px 20px 11px;border-bottom:1px solid var(--border);background:var(--bg);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+h1{font-size:22px;margin:0 0 4px}.sub,.small{color:var(--muted);font-size:13px}.controls{display:flex;gap:7px;flex-wrap:wrap}.controls input,.controls select,.controls button{font:inherit;color:var(--text);border:1px solid var(--border);background:var(--panel);border-radius:6px;padding:7px 9px}.controls input{width:220px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 290px;height:calc(100vh - 88px);min-height:600px}
+main{overflow:hidden;background-color:var(--bg);background-image:radial-gradient(var(--grid) 1px,transparent 1px);background-size:24px 24px}
+svg{width:100%;height:100%;touch-action:none;cursor:grab}svg.dragging{cursor:grabbing}
+.side{border-left:1px solid var(--border);background:var(--panel);padding:13px;overflow:auto}.stats{display:grid;grid-template-columns:1fr 1fr;gap:6px}.stat{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px}.stat b{display:block;font-size:17px}.stat span{font-size:11px;color:var(--muted)}
+.legend{margin:13px 0;display:grid;gap:7px;font-size:12px}.legend span{display:inline-block;width:10px;height:10px;border-radius:50%;margin-left:6px;vertical-align:-1px}
+#details{border-top:1px solid var(--border);padding-top:11px;line-height:1.7}.notice{background:color-mix(in srgb,#e0a000 12%,var(--panel));border:1px solid #8b6f2b;border-radius:6px;padding:8px;margin:9px 0;font-size:12px}
+ul{padding-right:20px}.node circle{stroke:var(--bg);stroke-width:2}.node text{pointer-events:none;fill:var(--text)}.title{font-size:11px;font-weight:600}.cat{font-size:9px;fill:var(--muted)!important}.edge{fill:none;stroke:var(--edge);stroke-width:1.2;opacity:.8}.edge.coreq{stroke-dasharray:5 5}.dim{opacity:.08}.selected circle{stroke:var(--accent);stroke-width:3}.match circle{stroke:var(--text);stroke-width:3}
+@media(max-width:850px){.layout{grid-template-columns:1fr;height:auto}.side{border:0;border-top:1px solid var(--border);max-height:400px}.layout main{height:70vh;min-height:500px}}</style>
 </head>
 <body>
 <header>
@@ -68,17 +67,18 @@ async function load(){
  buildLayout();render();audit();
 }
 function buildLayout(){
- var indeg={},adj={};courses.forEach(function(c){indeg[c.id]=0;adj[c.id]=[]});
- rels.filter(function(e){return e.type==="pre"}).forEach(function(e){adj[e.s].push(e.t);indeg[e.t]++});
- var queue=courses.filter(function(c){return indeg[c.id]===0}).map(function(c){return c.id}),level={};
- queue.forEach(function(x){level[x]=0});
- for(var i=0;i<queue.length;i++){var v=queue[i];adj[v].forEach(function(w){level[w]=Math.max(level[w]||0,(level[v]||0)+1);indeg[w]--;if(indeg[w]===0)queue.push(w)})}
- courses.forEach(function(c){if(level[c.id]===undefined)level[c.id]=0});
- var groups={};courses.forEach(function(c){var l=level[c.id];(groups[l]||(groups[l]=[])).push(c)});
- var pos={},max=0;
- Object.keys(groups).forEach(function(l){max=Math.max(max,+l);groups[l].sort(function(a,b){return a.title.localeCompare(b.title,"fa")});groups[l].forEach(function(c,i){pos[c.id]={x:+l*300+35,y:i*92+35}})});
- var h=100;Object.keys(groups).forEach(function(l){h=Math.max(h,groups[l].length*92+70)});
- layout={pos:pos,w:(max+1)*300+300,h:h};
+ var n=courses.length, pos={},vel={},fixed=false;
+ courses.forEach(function(c,i){var a=i/n*Math.PI*2;pos[c.id]={x:Math.cos(a)*500,y:Math.sin(a)*500};vel[c.id]={x:0,y:0}});
+ for(var iter=0;iter<180;iter++){
+  var force={};courses.forEach(function(c){force[c.id]={x:0,y:0}});
+  for(var i=0;i<n;i++)for(var j=i+1;j<n;j++){var a=pos[courses[i].id],b=pos[courses[j].id],dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy+1,d=Math.sqrt(d2),f=15000/d2;force[courses[i].id].x+=dx/d*f;force[courses[i].id].y+=dy/d*f;force[courses[j].id].x-=dx/d*f;force[courses[j].id].y-=dy/d*f}
+  rels.forEach(function(e){var a=pos[e.s],b=pos[e.t],dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)+1,f=(d-220)*0.012;force[e.s].x+=dx/d*f;force[e.s].y+=dy/d*f;force[e.t].x-=dx/d*f;force[e.t].y-=dy/d*f});
+  courses.forEach(function(c){var p=pos[c.id],f=force[c.id];vel[c.id].x=(vel[c.id].x+f.x)*.82;vel[c.id].y=(vel[c.id].y+f.y)*.82;p.x+=vel[c.id].x;p.y+=vel[c.id].y});
+ }
+ var minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+ courses.forEach(function(c){var p=pos[c.id];minX=Math.min(minX,p.x);minY=Math.min(minY,p.y);maxX=Math.max(maxX,p.x);maxY=Math.max(maxY,p.y)});
+ courses.forEach(function(c){pos[c.id]={x:pos[c.id].x-minX+80,y:pos[c.id].y-minY+80}});
+ layout={pos:pos,w:maxX-minX+390,h:maxY-minY+220};
 }
 function edgePath(a,b){
  var sx=a.x+230,sy=a.y+36,tx=b.x,ty=b.y+36;
@@ -134,5 +134,3 @@ svg.onpointerdown=function(e){if(e.target.closest(".node"))return;drag=true;last
 window.onpointermove=function(e){if(!drag)return;tx+=e.clientX-last.x;ty+=e.clientY-last.y;last={x:e.clientX,y:e.clientY};transform()};
 window.onpointerup=function(){drag=false;svg.classList.remove("dragging")};
 load().catch(function(e){document.getElementById("details").textContent="خطا در بارگذاری: "+e.message});
-</script>
-</body></html>
