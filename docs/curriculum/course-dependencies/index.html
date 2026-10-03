@@ -41,7 +41,7 @@ function id(u){return decodeURIComponent(u.split("/").filter(Boolean).pop())}
 function esc(s){return String(s).replace(/[&<>"']/g,function(m){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[m]})}
 async function load(){
  var idx=await fetch("/search-index.json").then(function(r){return r.json()});
- var ds=idx.documents.filter(function(d){return d.u&&d.u.indexOf("/docs/curriculum/")===0&&d.b&&d.b.indexOf("برنامه درسی")>=0});
+ var ds=idx[0].documents.filter(function(d){return d.u&&d.u.indexOf("/docs/curriculum/")===0&&d.b&&d.b.indexOf("برنامه درسی")>=0});
  var seen={};ds=ds.filter(function(d){if(seen[d.u])return false;seen[d.u]=1;return true});
  courses=ds.map(function(d){return{id:id(d.u),url:d.u,title:d.t,category:cat(d.b),prereqs:[],coreqs:[],conditions:[]}});
  var map={};courses.forEach(function(c){map[norm(c.title)]=c});
