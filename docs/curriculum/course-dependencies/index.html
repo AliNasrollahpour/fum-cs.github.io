@@ -172,7 +172,7 @@ function buildLayout(){
  var minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
  courses.forEach(function(c){var p=pos[c.id];minX=Math.min(minX,p.x);minY=Math.min(minY,p.y);maxX=Math.max(maxX,p.x);maxY=Math.max(maxY,p.y)});
  courses.forEach(function(c){pos[c.id]={x:pos[c.id].x-minX+80,y:pos[c.id].y-minY+80}});
- layout={pos:pos,w:Math.max(800,maxX-minX+160),h:Math.max(600,maxY-minY+160)};
+ layout={pos:pos,w:Math.max(800,maxX-minX+160),h:Math.max(600,maxY-minY+160),depth:depth,maxDepth:maxDepth};
 }
 function edgePath(a,b){
  var dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)||1,r=10;
@@ -265,7 +265,7 @@ function simulate(){
  courses.forEach(function(c){
   if(c.id===dragNode)return;
   var p=layout.pos[c.id],f=force[c.id];
-  var targetX=80+(maxDepth-(depth[c.id]||0))*150;
+  var targetX=80+(layout.maxDepth-(layout.depth[c.id]||0))*150;
   f.x+=(targetX-p.x)*0.035;
   f.y+=(300-p.y)*0.002;
   p.x+=f.x;p.y+=f.y;
