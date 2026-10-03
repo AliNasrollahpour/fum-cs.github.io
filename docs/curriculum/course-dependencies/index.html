@@ -230,10 +230,17 @@ function resolveCollisions(pos,skipId){
 function treeBoidForce(pos,depth,maxDepth,ids,base){
  var force={};ids.forEach(function(id){force[id]={x:0,y:0}});
  var radius=240;
+ var depthGap=70+forces.repulsion*30;
+ var anchorY=80;
+
  ids.forEach(function(id){
-  var p=pos[id],d=depth[id]||0,ratio=maxDepth?d/maxDepth:.5;
-  force[id].y+=(2*ratio-1)*0.12*forces.tree;
-  if(d===0)force[id].y+=(anchorY-p.y)*0.012*forces.tree;
+  var p=pos[id],d=depth[id]||0;
+  var targetY=anchorY+d*depthGap;
+
+  // Each depth has its own horizontal target line.
+  // Repulsion controls the distance between those lines.
+  force[id].y+=(targetY-p.y)*0.015*forces.tree;
+
   var sx=0,sy=0,ay=0,count=0;
   ids.forEach(function(other){
    if(other===id)return;
@@ -242,15 +249,18 @@ function treeBoidForce(pos,depth,maxDepth,ids,base){
    var od=depth[other]||0,dr=Math.abs(od-d)/Math.max(1,maxDepth);
    if(dr>.3)return;
    var w=1-dist/radius;
-   sx+=q.x*w;sy+=q.y*w;
-   ay+=((2*(maxDepth?od/maxDepth:.5)-1)-(2*ratio-1))*0.025*w;
+   sx+=q.x*w;
+   sy+=q.y*w;
+   ay+=(od-d)*0.025*w;
    count+=w;
   });
+
   if(count){
    force[id].x+=(sx/count-p.x)*0.0015*forces.tree;
-   force[id].y+=(sy/count-p.y)*0.0015*forces.tree+ay/count*forces.tree;
+   force[id].y+=(sy/count-p.y)*0.0015*forces.tree+ay/count*depthGap*forces.tree;
   }
  });
+
  var totalX=0,totalY=0,totalMagnitude=0;
  ids.forEach(function(id){
   totalX+=force[id].x;
