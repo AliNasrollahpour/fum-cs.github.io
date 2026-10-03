@@ -146,9 +146,17 @@ function buildLayout(){
    var dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy,d=Math.sqrt(d2);
    if(d>180)continue;
    d2+=900;d=Math.sqrt(d2);
+   var da=depth[courses[i].id]||0,db=depth[courses[j].id]||0;
+   var leafA=maxDepth?1+(maxDepth-da)/maxDepth:1;
+   var leafB=maxDepth?1+(maxDepth-db)/maxDepth:1;
    var f=forces.repulsion*Math.min(1.2,4500/d2);
-   force[courses[i].id].x+=dx/d*f;force[courses[i].id].y+=dy/d*f;
-   force[courses[j].id].x-=dx/d*f;force[courses[j].id].y-=dy/d*f;
+   force[courses[i].id].x+=dx/d*f*leafA;force[courses[i].id].y+=dy/d*f*leafA;
+   force[courses[j].id].x-=dx/d*f*leafB;force[courses[j].id].y-=dy/d*f*leafB;
+   if(da===db){
+    var same=f*.35;
+    force[courses[i].id].x+=dx/d*same;force[courses[i].id].y+=dy/d*same;
+    force[courses[j].id].x-=dx/d*same;force[courses[j].id].y-=dy/d*same;
+   }
   }
   rels.forEach(function(e){
    var a=pos[e.s],b=pos[e.t];if(!a||!b)return;
@@ -159,8 +167,8 @@ function buildLayout(){
   });
   courses.forEach(function(c){
    var p=pos[c.id],f=force[c.id];
-   var targetY=80+(maxDepth-(depth[c.id]||0))*150;
-   f.y+=(targetY-p.y)*0.035*forces.tree;
+   var depthRatio=maxDepth?(depth[c.id]||0)/maxDepth:.5;
+   f.y+=(1-2*depthRatio)*0.035*forces.tree;
    f.x+=(80-p.x)*0.002;
    vel[c.id].x=(vel[c.id].x+f.x)*0.82;
    vel[c.id].y=(vel[c.id].y+f.y)*0.82;
@@ -251,9 +259,17 @@ function simulate(){
   var dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy,d=Math.sqrt(d2);
   if(d>180)continue;
   d2+=900;d=Math.sqrt(d2);
+  var da=layout.depth[courses[i].id]||0,db=layout.depth[courses[j].id]||0;
+  var leafA=layout.maxDepth?1+(layout.maxDepth-da)/layout.maxDepth:1;
+  var leafB=layout.maxDepth?1+(layout.maxDepth-db)/layout.maxDepth:1;
   var f=forces.repulsion*Math.min(1.2,4500/d2);
-  force[courses[i].id].x+=dx/d*f;force[courses[i].id].y+=dy/d*f;
-  force[courses[j].id].x-=dx/d*f;force[courses[j].id].y-=dy/d*f;
+  force[courses[i].id].x+=dx/d*f*leafA;force[courses[i].id].y+=dy/d*f*leafA;
+  force[courses[j].id].x-=dx/d*f*leafB;force[courses[j].id].y-=dy/d*f*leafB;
+  if(da===db){
+   var same=f*.35;
+   force[courses[i].id].x+=dx/d*same;force[courses[i].id].y+=dy/d*same;
+   force[courses[j].id].x-=dx/d*same;force[courses[j].id].y-=dy/d*same;
+  }
  }
  rels.forEach(function(e){
   var a=layout.pos[e.s],b=layout.pos[e.t];if(!a||!b)return;
@@ -266,8 +282,8 @@ function simulate(){
  courses.forEach(function(c){
   if(c.id===dragNode)return;
   var p=layout.pos[c.id],f=force[c.id];
-  var targetY=80+(layout.maxDepth-(layout.depth[c.id]||0))*150;
-  f.y+=(targetY-p.y)*0.035*forces.tree;
+  var depthRatio=layout.maxDepth?(layout.depth[c.id]||0)/layout.maxDepth:.5;
+  f.y+=(1-2*depthRatio)*0.035*forces.tree;
   f.x+=(80-p.x)*0.002;
   p.x+=f.x;p.y+=f.y;
   if(Math.abs(f.x)+Math.abs(f.y)>.18)moving=true;
