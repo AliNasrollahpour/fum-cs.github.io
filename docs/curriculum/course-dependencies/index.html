@@ -201,7 +201,8 @@ function buildLayout(){
  var minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
  courses.forEach(function(c){var p=pos[c.id];minX=Math.min(minX,p.x);minY=Math.min(minY,p.y);maxX=Math.max(maxX,p.x);maxY=Math.max(maxY,p.y)});
  courses.forEach(function(c){pos[c.id]={x:pos[c.id].x-minX+80,y:pos[c.id].y-minY+80}});
- layout={pos:pos,w:Math.max(800,maxX-minX+160),h:Math.max(600,maxY-minY+160),depth:depth,maxDepth:maxDepth,component:component,components:components};\n fitGraph();
+ layout={pos:pos,w:Math.max(800,maxX-minX+160),h:Math.max(600,maxY-minY+160),depth:depth,maxDepth:maxDepth,component:component,components:components};
+ fitGraph();
 }
 function minimizeCrossings(pos,depth,component,components){
  var byDepth={};
@@ -255,7 +256,8 @@ function minimizeCrossings(pos,depth,component,components){
    });
   }
  }
-}\nvar edgeLanes={};
+}
+var edgeLanes={};
 function edgePath(a,b,key){
  var dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)||1,r=10;
  var ux=dx/d,uy=dy/d,sx=a.x+ux*r,sy=a.y+uy*r,tx=b.x-ux*r,ty=b.y-uy*r;
@@ -499,7 +501,8 @@ window.onpointermove=function(e){
   tx+=e.clientX-last.x;ty+=e.clientY-last.y;last={x:e.clientX,y:e.clientY};transform();
  }
 };
-window.onresize=function(){fitGraph()};\nwindow.onpointerup=function(e){
+window.onresize=function(){fitGraph()};
+window.onpointerup=function(e){
  var wasNode=!!dragNode;
  drag=false;dragNode=null;svg.classList.remove("dragging");
  if(wasNode&&svg.releasePointerCapture)try{svg.releasePointerCapture(e.pointerId)}catch(_){}
