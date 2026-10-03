@@ -16,7 +16,7 @@ svg{width:100%;height:100%;touch-action:none;cursor:grab}svg.dragging{cursor:gra
 .side{border-left:1px solid var(--border);background:var(--panel);padding:13px;overflow:auto}.stats{display:grid;grid-template-columns:1fr 1fr;gap:6px}.stat{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px}.stat b{display:block;font-size:17px}.stat span{font-size:11px;color:var(--muted)}
 .legend{margin:13px 0;display:grid;gap:7px;font-size:12px}.legend span{display:inline-block;width:10px;height:10px;border-radius:50%;margin-left:6px;vertical-align:-1px}
 #details{border-top:1px solid var(--border);padding-top:11px;line-height:1.7}.notice{background:color-mix(in srgb,#e0a000 12%,var(--panel));border:1px solid #8b6f2b;border-radius:6px;padding:8px;margin:9px 0;font-size:12px}
-ul{padding-right:20px}.node ellipse{stroke:var(--bg);stroke-width:2}.node text{pointer-events:none;fill:var(--text)}.title{font-size:11px;font-weight:600}.cat{font-size:9px;fill:var(--muted)!important}.edge{fill:none;stroke:var(--edge);stroke-width:2.8;opacity:.85}.edge.coreq{stroke-dasharray:5 5}.dim{opacity:.08}.selected ellipse{stroke:var(--accent);stroke-width:3}.match ellipse{stroke:var(--text);stroke-width:3}
+ul{padding-right:20px}.node ellipse{stroke:var(--bg);stroke-width:2}.node text{pointer-events:none;fill:var(--text)}.title{font-size:11px;font-weight:600}.node-title{font-size:11px;font-weight:600}.cat{font-size:9px;fill:var(--muted)!important}.edge{fill:none;stroke:var(--edge);stroke-width:2.8;opacity:.85}.edge.coreq{stroke-dasharray:5 5}.dim{opacity:.08}.selected ellipse{stroke:var(--accent);stroke-width:3}.match ellipse{stroke:var(--text);stroke-width:3}
 @media(max-width:850px){.layout{grid-template-columns:1fr;height:auto}.side{border:0;border-top:1px solid var(--border);max-height:400px}.layout main{height:70vh;min-height:500px}}</style>
 </head>
 <body>
@@ -147,8 +147,8 @@ function buildLayout(){
    if(d>180)continue;
    d2+=900;d=Math.sqrt(d2);
    var da=depth[courses[i].id]||0,db=depth[courses[j].id]||0;
-   var leafA=maxDepth?1+(maxDepth-da)/maxDepth:1;
-   var leafB=maxDepth?1+(maxDepth-db)/maxDepth:1;
+   var leafA=maxDepth?1+da/maxDepth:1;
+   var leafB=maxDepth?1+db/maxDepth:1;
    var f=forces.repulsion*Math.min(1.2,4500/d2);
    force[courses[i].id].x+=dx/d*f*leafA;force[courses[i].id].y+=dy/d*f*leafA;
    force[courses[j].id].x-=dx/d*f*leafB;force[courses[j].id].y-=dy/d*f*leafB;
@@ -165,16 +165,10 @@ function buildLayout(){
    force[e.s].x+=dx/d*f;force[e.s].y+=dy/d*f;
    force[e.t].x-=dx/d*f;force[e.t].y-=dy/d*f;
   });
-  var treeMean=0;
-  courses.forEach(function(c){
-   var depthRatio=maxDepth?(depth[c.id]||0)/maxDepth:.5;
-   treeMean+=1-2*depthRatio;
-  });
-  treeMean/=n;
+  var tree=treeBoidForce(pos,depth,maxDepth,courses.map(function(c){return c.id}),pos);
   courses.forEach(function(c){
    var p=pos[c.id],f=force[c.id];
-   var depthRatio=maxDepth?(depth[c.id]||0)/maxDepth:.5;
-   f.y+=((1-2*depthRatio)-treeMean)*0.12*forces.tree;
+   f.x+=tree[c.id].x;f.y+=tree[c.id].y;
    f.x+=(80-p.x)*0.002;
    vel[c.id].x=(vel[c.id].x+f.x)*0.82;
    vel[c.id].y=(vel[c.id].y+f.y)*0.82;
@@ -194,6 +188,48 @@ function edgePath(a,b){
  var bend=Math.min(45,Math.max(0,(d-220)*.12)),nx=-uy*bend,ny=ux*bend;
  return "M "+sx+" "+sy+" C "+(sx+dx*.35+nx)+" "+(sy+dy*.35+ny)+" "+(tx-dx*.35+nx)+" "+(ty-dy*.35+ny)+" "+tx+" "+ty;
 }
+function wrapTitle(title,maxChars){
+ var words=String(title||"").split(/\s+/).filter(Boolean),lines=[],line="";
+ words.forEach(function(word){
+  if(word.length>maxChars){
+   if(line){lines.push(line);line=""}
+   for(var i=0;i<word.length;i+=maxChars)lines.push(word.slice(i,i+maxChars));
+  }else if(!line)line=word;
+  else if((line+" "+word).length<=maxChars)line+=" "+word;
+  else{lines.push(line);line=word}
+ });
+ if(line)lines.push(line);
+ return lines.length?lines:[""];
+}
+function treeBoidForce(pos,depth,maxDepth,ids,base){
+ var force={};ids.forEach(function(id){force[id]={x:0,y:0}});
+ var radius=240;
+ ids.forEach(function(id){
+  var p=pos[id],d=depth[id]||0,ratio=maxDepth?d/maxDepth:.5;
+  force[id].y+=(2*ratio-1)*0.12*forces.tree;
+  var sx=0,sy=0,ay=0,count=0;
+  ids.forEach(function(other){
+   if(other===id)return;
+   var q=pos[other],dx=q.x-p.x,dy=q.y-p.y,dist=Math.sqrt(dx*dx+dy*dy);
+   if(dist>radius||dist<1)return;
+   var od=depth[other]||0,dr=Math.abs(od-d)/Math.max(1,maxDepth);
+   if(dr>.3)return;
+   var w=1-dist/radius;
+   sx+=q.x*w;sy+=q.y*w;
+   ay+=((2*(maxDepth?od/maxDepth:.5)-1)-(2*ratio-1))*0.025*w;
+   count+=w;
+  });
+  if(count){
+   force[id].x+=(sx/count-p.x)*0.0015*forces.tree;
+   force[id].y+=(sy/count-p.y)*0.0015*forces.tree+ay/count*forces.tree;
+  }
+ });
+ var meanX=0,meanY=0;
+ ids.forEach(function(id){meanX+=force[id].x;meanY+=force[id].y});
+ meanX/=ids.length;meanY/=ids.length;
+ ids.forEach(function(id){force[id].x-=meanX;force[id].y-=meanY});
+ return force;
+}
 function render(){
  view.innerHTML="";
  svg.setAttribute("viewBox","0 0 "+layout.w+" "+layout.h);
@@ -212,8 +248,13 @@ function render(){
   var visible=filter==="all"||filter===c.category,match=!query||norm(c.title).indexOf(norm(query))>=0;
   if(!visible||!match||(selected&&c.id!==selected&&!rels.some(function(e){return(e.s===selected&&e.t===c.id)||(e.t===selected&&e.s===c.id)})))n.classList.add("dim");
   if(selected===c.id)n.classList.add("selected");if(query&&match)n.classList.add("match");
-  var r=document.createElementNS("http://www.w3.org/2000/svg","ellipse");r.setAttribute("rx",Math.max(48,c.title.length*4.2+18));r.setAttribute("ry",22);r.setAttribute("fill",c.category==="base"?"#455a64":c.category==="mandatory"?"#8e2b2b":"#3949ab");n.appendChild(r);
-  var t=document.createElementNS("http://www.w3.org/2000/svg","text");t.setAttribute("x",0);t.setAttribute("y",4);t.setAttribute("text-anchor","middle");t.setAttribute("fill","#fff");t.setAttribute("class","title");t.textContent=c.title;n.appendChild(t);
+  var r=document.createElementNS("http://www.w3.org/2000/svg","ellipse");
+  var lines=wrapTitle(c.title,11),maxLine=0;
+  lines.forEach(function(line){maxLine=Math.max(maxLine,line.length)});
+  r.setAttribute("rx",Math.max(34,maxLine*3.15+12));r.setAttribute("ry",Math.max(26,10+lines.length*7));r.setAttribute("fill",c.category==="base"?"#455a64":c.category==="mandatory"?"#8e2b2b":"#3949ab");n.appendChild(r);
+  var t=document.createElementNS("http://www.w3.org/2000/svg","text");t.setAttribute("x",0);t.setAttribute("y",-((lines.length-1)*6));t.setAttribute("text-anchor","middle");t.setAttribute("class","node-title");t.setAttribute("fill","#fff");
+  lines.forEach(function(line,i){var span=document.createElementNS("http://www.w3.org/2000/svg","tspan");span.setAttribute("x",0);span.setAttribute("dy",i===0?0:12);span.textContent=line;t.appendChild(span)});
+  n.appendChild(t);
   n.onpointerdown=function(e){
  nodePointerDown(c,e);
 };
@@ -266,8 +307,8 @@ function simulate(){
   if(d>180)continue;
   d2+=900;d=Math.sqrt(d2);
   var da=layout.depth[courses[i].id]||0,db=layout.depth[courses[j].id]||0;
-  var leafA=layout.maxDepth?1+(layout.maxDepth-da)/layout.maxDepth:1;
-  var leafB=layout.maxDepth?1+(layout.maxDepth-db)/layout.maxDepth:1;
+  var leafA=layout.maxDepth?1+da/layout.maxDepth:1;
+  var leafB=layout.maxDepth?1+db/layout.maxDepth:1;
   var f=forces.repulsion*Math.min(1.2,4500/d2);
   force[courses[i].id].x+=dx/d*f*leafA;force[courses[i].id].y+=dy/d*f*leafA;
   force[courses[j].id].x-=dx/d*f*leafB;force[courses[j].id].y-=dy/d*f*leafB;
@@ -284,18 +325,12 @@ function simulate(){
   force[e.s].x+=dx/d*f;force[e.s].y+=dy/d*f;
   force[e.t].x-=dx/d*f;force[e.t].y-=dy/d*f;
  });
- var treeMean=0;
- courses.forEach(function(c){
-  var depthRatio=layout.maxDepth?(layout.depth[c.id]||0)/layout.maxDepth:.5;
-  treeMean+=1-2*depthRatio;
- });
- treeMean/=courses.length;
+ var tree=treeBoidForce(layout.pos,layout.depth,layout.maxDepth,courses.map(function(c){return c.id}),layout.pos);
  var moving=false;
  courses.forEach(function(c){
   if(c.id===dragNode)return;
   var p=layout.pos[c.id],f=force[c.id];
-  var depthRatio=layout.maxDepth?(layout.depth[c.id]||0)/layout.maxDepth:.5;
-  f.y+=((1-2*depthRatio)-treeMean)*0.12*forces.tree;
+  f.x+=tree[c.id].x;f.y+=tree[c.id].y;
   f.x+=(80-p.x)*0.002;
   p.x+=f.x;p.y+=f.y;
   if(Math.abs(f.x)+Math.abs(f.y)>.18)moving=true;
