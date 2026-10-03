@@ -114,38 +114,59 @@ async function load(){
  buildLayout();render();audit();
 }
 function buildLayout(){
- var n=courses.length,pos={},vel={};
+ var n=courses.length,pos={},vel={},depth={},adj={};
  if(!n){layout={pos:{},w:800,h:600};return}
- var radius=Math.max(260,Math.sqrt(n)*55);
+ courses.forEach(function(c){adj[c.id]=[]});
+ rels.filter(function(e){return e.type==="pre"}).forEach(function(e){adj[e.s].push(e.t)});
+ function depthOf(id,seen){
+  if(depth[id]!=null)return depth[id];
+  if(seen[id])return 0;
+  seen[id]=1;
+  var next=adj[id]||[];
+  var d=0;
+  next.forEach(function(v){d=Math.max(d,depthOf(v,seen)+1)});
+  delete seen[id];
+  depth[id]=d;
+  return d;
+ }
+ courses.forEach(function(c){depthOf(c.id,{})});
+ var maxDepth=0;
+ courses.forEach(function(c){maxDepth=Math.max(maxDepth,depth[c.id]||0)});
+ var radius=Math.max(220,Math.sqrt(n)*42);
  courses.forEach(function(c,i){
+  var d=depth[c.id]||0;
   var a=i/n*Math.PI*2;
-  pos[c.id]={x:400+Math.cos(a)*radius,y:300+Math.sin(a)*radius};
+  pos[c.id]={x:80+(maxDepth-d)*150+Math.cos(a)*radius*.18,y:300+Math.sin(a)*radius};
   vel[c.id]={x:0,y:0};
  });
- for(var iter=0;iter<220;iter++){
+ for(var iter=0;iter<260;iter++){
   var force={};
   courses.forEach(function(c){force[c.id]={x:0,y:0}});
   for(var i=0;i<n;i++)for(var j=i+1;j<n;j++){
    var a=pos[courses[i].id],b=pos[courses[j].id];
-   var dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy+400,d=Math.sqrt(d2);
-   var f=Math.min(3,9000/d2);
+   var dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy,d=Math.sqrt(d2);
+   if(d>260)continue;
+   d2+=400;d=Math.sqrt(d2);
+   var f=Math.min(3.2,12000/d2);
    force[courses[i].id].x+=dx/d*f;force[courses[i].id].y+=dy/d*f;
    force[courses[j].id].x-=dx/d*f;force[courses[j].id].y-=dy/d*f;
   }
   rels.forEach(function(e){
    var a=pos[e.s],b=pos[e.t];if(!a||!b)return;
    var dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)+1;
-   var f=Math.max(-2,Math.min(2,(d-150)*0.008));
+   var f=Math.max(-3.5,Math.min(3.5,(d-150)*0.012));
    force[e.s].x+=dx/d*f;force[e.s].y+=dy/d*f;
    force[e.t].x-=dx/d*f;force[e.t].y-=dy/d*f;
   });
   courses.forEach(function(c){
    var p=pos[c.id],f=force[c.id];
-   f.x+=(400-p.x)*0.002;f.y+=(300-p.y)*0.002;
-   vel[c.id].x=(vel[c.id].x+f.x)*0.86;
-   vel[c.id].y=(vel[c.id].y+f.y)*0.86;
-   vel[c.id].x=Math.max(-8,Math.min(8,vel[c.id].x));
-   vel[c.id].y=Math.max(-8,Math.min(8,vel[c.id].y));
+   var targetX=80+(maxDepth-(depth[c.id]||0))*150;
+   f.x+=(targetX-p.x)*0.018;
+   f.y+=(300-p.y)*0.002;
+   vel[c.id].x=(vel[c.id].x+f.x)*0.82;
+   vel[c.id].y=(vel[c.id].y+f.y)*0.82;
+   vel[c.id].x=Math.max(-14,Math.min(14,vel[c.id].x));
+   vel[c.id].y=Math.max(-10,Math.min(10,vel[c.id].y));
    p.x+=vel[c.id].x;p.y+=vel[c.id].y;
   });
  }
