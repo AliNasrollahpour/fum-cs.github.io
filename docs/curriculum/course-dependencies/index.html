@@ -9,7 +9,7 @@
 @media(prefers-color-scheme:dark){:root{--bg:#202020;--panel:#262626;--text:#dcddde;--muted:#999;--border:#3b3b3b;--accent:#e05252;--grid:#2b2b2b;--edge:#777;--node:#444}}
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--text)}
 header{padding:16px 20px 11px;border-bottom:1px solid var(--border);background:var(--bg);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
-h1{font-size:22px;margin:0 0 4px}.sub,.small{color:var(--muted);font-size:13px}.controls{display:flex;gap:7px;flex-wrap:wrap}.controls input,.controls select,.controls button{font:inherit;color:var(--text);border:1px solid var(--border);background:var(--panel);border-radius:6px;padding:7px 9px}.controls input{width:220px}
+h1{font-size:22px;margin:0 0 4px}.sub,.small{color:var(--muted);font-size:13px}.controls{display:flex;gap:7px;flex-wrap:wrap}.controls input,.controls select,.controls button{font:inherit;color:var(--text);border:1px solid var(--border);background:var(--panel);border-radius:6px;padding:7px 9px}.controls input{width:220px}.controls .force{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}.controls .force input{width:100px}.controls .force span{width:28px;color:var(--text)}
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 290px;height:calc(100vh - 88px);min-height:600px}
 main{overflow:hidden;background-color:var(--bg);background-image:radial-gradient(var(--grid) 1px,transparent 1px);background-size:24px 24px}
 svg{width:100%;height:100%;touch-action:none;cursor:grab}svg.dragging{cursor:grabbing}
@@ -22,7 +22,7 @@ ul{padding-right:20px}.node circle{stroke:var(--bg);stroke-width:2}.node text{po
 <body>
 <header>
 <div><h1>نمودار وابستگی دروس</h1><div class="sub">علوم کامپیوتر دانشگاه فردوسی مشهد — پیش‌نیازها و هم‌نیازها</div></div>
-<div class="controls"><input id="search" placeholder="جستجوی درس…"><select id="category"><option value="all">همه دروس</option><option value="base">پایه</option><option value="mandatory">الزامی</option><option value="elective">اختیاری</option></select><button id="reset">نمایش همه</button></div>
+<div class="controls"><input id="search" placeholder="جستجوی درس…"><select id="category"><option value="all">همه دروس</option><option value="base">پایه</option><option value="mandatory">الزامی</option><option value="elective">اختیاری</option></select><label class="force">دفع گره‌ها <input id="repulsion" type="range" min="0" max="1" step="0.01" value="0.5"><span id="repulsionValue">0.50</span></label><label class="force">کشش یال‌ها <input id="spring" type="range" min="0" max="1" step="0.01" value="0.5"><span id="springValue">0.50</span></label><label class="force">چیدمان درختی <input id="tree" type="range" min="0" max="1" step="0.01" value="0.5"><span id="treeValue">0.50</span></label><button id="reset">نمایش همه</button></div>
 </header>
 <div class="layout">
 <main><svg id="graph"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8z" fill="#777"/></marker></defs><g id="view"></g></svg></main>
@@ -33,7 +33,7 @@ ul{padding-right:20px}.node circle{stroke:var(--bg);stroke-width:2}.node text{po
 </aside>
 </div>
 <script>
-var courses=[],rels=[],unresolved=[],selected=null,filter="all",query="",layout=null;
+var courses=[],rels=[],unresolved=[],selected=null,filter="all",query="",layout=null;var forces={repulsion:.5,spring:.5,tree:.5};
 var svg=document.getElementById("graph"),view=document.getElementById("view");
 function norm(s){return(s||"").replace(/[\u200c\u200d]/g,"").replace(/[يى]/g,"ی").replace(/ك/g,"ک").replace(/[\u064B-\u065F]/g,"").replace(/\s+/g," ").trim()}
 function cat(b){return b.indexOf("دروس پایه")>=0?"base":b.indexOf("دروس الزامی")>=0?"mandatory":"elective"}
@@ -146,21 +146,21 @@ function buildLayout(){
    var dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy,d=Math.sqrt(d2);
    if(d>180)continue;
    d2+=900;d=Math.sqrt(d2);
-   var f=Math.min(1.2,4500/d2);
+   var f=forces.repulsion*Math.min(1.2,4500/d2);
    force[courses[i].id].x+=dx/d*f;force[courses[i].id].y+=dy/d*f;
    force[courses[j].id].x-=dx/d*f;force[courses[j].id].y-=dy/d*f;
   }
   rels.forEach(function(e){
    var a=pos[e.s],b=pos[e.t];if(!a||!b)return;
    var dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)+1;
-   var f=Math.max(-3.5,Math.min(3.5,(d-150)*0.012));
+   var f=forces.spring*Math.max(-3.5,Math.min(3.5,(d-150)*0.012));
    force[e.s].x+=dx/d*f;force[e.s].y+=dy/d*f;
    force[e.t].x-=dx/d*f;force[e.t].y-=dy/d*f;
   });
   courses.forEach(function(c){
    var p=pos[c.id],f=force[c.id];
    var targetX=80+(maxDepth-(depth[c.id]||0))*150;
-   f.x+=(targetX-p.x)*0.035;
+   f.x+=(targetX-p.x)*0.035*forces.tree;
    f.y+=(300-p.y)*0.002;
    vel[c.id].x=(vel[c.id].x+f.x)*0.82;
    vel[c.id].y=(vel[c.id].y+f.y)*0.82;
@@ -226,6 +226,8 @@ function details(c){
 function audit(){
  var a=document.getElementById("audit");a.innerHTML=unresolved.length?"<div class='notice'><b>"+unresolved.length+" مورد خارج از گراف</b><ul>"+unresolved.map(function(x){return"<li>"+esc(x.course.title)+": "+esc(x.ref)+"</li>"}).join("")+"</ul></div>":"<div class='small'>همه ارجاعات به دروس موجود متصل شدند.</div>";
 }
+function forceControl(id,key){var el=document.getElementById(id),out=document.getElementById(id+"Value");el.oninput=function(){forces[key]=Number(el.value);out.textContent=Number(el.value).toFixed(2);startSimulation()}}
+forceControl("repulsion","repulsion");forceControl("spring","spring");forceControl("tree","tree");
 document.getElementById("search").oninput=function(e){query=e.target.value;render()};
 document.getElementById("category").onchange=function(e){filter=e.target.value;render()};
 document.getElementById("reset").onclick=function(){query="";filter="all";selected=null;document.getElementById("search").value="";document.getElementById("category").value="all";document.getElementById("details").textContent="یک گره را انتخاب کنید. دوبار کلیک صفحه درس را باز می‌کند.";render()};
@@ -250,14 +252,14 @@ function simulate(){
   var dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy,d=Math.sqrt(d2);
   if(d>180)continue;
   d2+=900;d=Math.sqrt(d2);
-  var f=Math.min(1.2,4500/d2);
+  var f=forces.repulsion*Math.min(1.2,4500/d2);
   force[courses[i].id].x+=dx/d*f;force[courses[i].id].y+=dy/d*f;
   force[courses[j].id].x-=dx/d*f;force[courses[j].id].y-=dy/d*f;
  }
  rels.forEach(function(e){
   var a=layout.pos[e.s],b=layout.pos[e.t];if(!a||!b)return;
   var dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)+1;
-  var f=Math.max(-3.5,Math.min(3.5,(d-150)*0.012));
+  var f=forces.spring*Math.max(-3.5,Math.min(3.5,(d-150)*0.012));
   force[e.s].x+=dx/d*f;force[e.s].y+=dy/d*f;
   force[e.t].x-=dx/d*f;force[e.t].y-=dy/d*f;
  });
@@ -266,7 +268,7 @@ function simulate(){
   if(c.id===dragNode)return;
   var p=layout.pos[c.id],f=force[c.id];
   var targetX=80+(layout.maxDepth-(layout.depth[c.id]||0))*150;
-  f.x+=(targetX-p.x)*0.035;
+  f.x+=(targetX-p.x)*0.035*forces.tree;
   f.y+=(300-p.y)*0.002;
   p.x+=f.x;p.y+=f.y;
   if(Math.abs(f.x)+Math.abs(f.y)>.18)moving=true;
