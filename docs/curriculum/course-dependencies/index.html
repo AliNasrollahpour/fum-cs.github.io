@@ -40,7 +40,7 @@ function cat(b){return b.indexOf("دروس پایه")>=0?"base":b.indexOf("در�
 function id(u){return decodeURIComponent(u.split("/").filter(Boolean).pop())}
 function esc(s){return String(s).replace(/[&<>"']/g,function(m){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[m]})}
 function sitePath(p){var base=location.pathname.indexOf("/docs/")>=0?location.pathname.split("/docs/")[0]:"";return base+"/"+String(p||"").replace(/^\/+/,"")}
-async async function load(){
+async function load(){
  var categories=[
   {path:"/docs/category/دروس-پایه/",category:"base"},
   {path:"/docs/category/دروس-الزامی/",category:"mandatory"},
